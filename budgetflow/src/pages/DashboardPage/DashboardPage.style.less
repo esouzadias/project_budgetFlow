@@ -1,0 +1,26 @@
+@import '../../styles/Globals.less';
+
+#dashboard-page{
+  #navbar{
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+    padding: 0 @widthPadding;
+    height: fit-content;
+  }
+  #dashboard-page-container{
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    justify-content: space-between;
+    padding: 20px @widthPadding;
+    display: flex;
+    flex-direction: column;
+    
+    #dashboard-overview-graph{
+      background-color: aqua;
+      width: 100%;
+    }
+  }
+}
