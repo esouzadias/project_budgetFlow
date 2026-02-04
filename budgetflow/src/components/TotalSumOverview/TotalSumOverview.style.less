@@ -1,0 +1,24 @@
+@import "../../styles/Globals.less";
+
+#total-sum-overview {
+  background-color: @background;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+  border-radius: @borderRound;
+  padding: 20px @widthPadding;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  
+  #total-sum-amount {
+    font-size: 2rem;
+    font-weight: bold;
+    color: @text-color;
+  }
+
+  #total-sum-label {
+    font-size: 1rem;
+    color: @text-color;
+    margin-top: 10px;
+  }
+}

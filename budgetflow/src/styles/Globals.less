@@ -34,3 +34,98 @@ body {
   background: @background;
   color: @text-color;
 }
+
+
+/* BUDGETFLOW UI TOKENS */
+:root {
+  --bf-radius-sm: 10px;
+  --bf-radius-md: 14px;
+  --bf-radius-lg: 18px;
+  --bf-radius-pill: 999px;
+
+  --bf-border: rgba(15, 23, 42, 0.12);
+  --bf-border-strong: rgba(15, 23, 42, 0.18);
+
+  --bf-surface: #ffffff;
+  --bf-surface-2: rgba(37, 99, 235, 0.06);
+
+  --bf-primary: #1a73e8;
+  --bf-primary-soft: rgba(26, 115, 232, 0.10);
+  --bf-primary-soft-2: rgba(26, 115, 232, 0.14);
+
+  --bf-text-muted: rgba(15, 23, 42, 0.65);
+}
+
+/* Generic bubbly surfaces */
+.bf-bubble-surface {
+  border-radius: var(--bf-radius-lg);
+  border: 1px solid var(--bf-border);
+  background: var(--bf-surface);
+}
+
+.bf-bubble-surface--soft {
+  background: var(--bf-surface-2);
+}
+
+/* Compact icon button (consistent) */
+.bf-icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--bf-radius-pill);
+  border: 1px solid transparent;
+  display: inline-grid;
+  place-items: center;
+  transition: background-color 140ms ease, border-color 140ms ease, transform 120ms ease;
+}
+
+.bf-icon-btn:hover {
+  background: rgba(15, 23, 42, 0.04);
+  border-color: var(--bf-border);
+  transform: scale(1.03);
+}
+
+/* Pill button */
+.bf-pill {
+  padding: 4px 10px;
+  border-radius: var(--bf-radius-pill);
+  border: 1px solid var(--bf-border);
+  background: rgba(15, 23, 42, 0.03);
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.bf-pill:hover {
+  background: rgba(15, 23, 42, 0.06);
+  border-color: var(--bf-border-strong);
+}
+
+.bf-pill__text {
+  font-weight: 800;
+}
+
+/* Read-only cell (turns into input on edit) */
+.bf-cell {
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 10px;
+  border-radius: var(--bf-radius-md);
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  cursor: text;
+}
+
+.bf-cell:hover {
+  background: rgba(15, 23, 42, 0.03);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+.bf-cell__placeholder {
+  color: var(--bf-text-muted);
+  opacity: 0.8;
+}
+
+.bf-row--active {
+  background: var(--bf-primary-soft) !important;
+}

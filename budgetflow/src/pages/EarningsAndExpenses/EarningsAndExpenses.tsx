@@ -1,14 +1,13 @@
-import "./EarningsAndExpenses.style.less";
+import RegistryTable from '../../components/RegistryTable/RegistryTable';
+import './EarningsAndExpenses.style.less';
 
-const EarningsAndExpenses = () => {
+export default function EarningsAndExpenses() {
   return (
-    <main id='earnings-and-expenses-page'>
-      <div id='earnings-and-expenses-container'>
-        <h2>Earnings and Expenses</h2>
-        <p>This is the Earnings and Expenses page.</p>
+    <main id="earnings-and-expenses-page">
+      <div id="earnings-and-expenses-container">
+        <RegistryTable title="Earnings" invertComparison={false} />
+        <RegistryTable title="Expenses" invertComparison />
       </div>
     </main>
-  )
+  );
 }
-
-export default EarningsAndExpenses
