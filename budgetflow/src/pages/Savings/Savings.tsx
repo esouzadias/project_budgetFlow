@@ -228,7 +228,7 @@ const Savings = ({ items, onChange }: Props) => {
   const stopTxEdit = () => setEditingTx(null);
 
   return (
-    <section id="bf-savings">
+    <section id="bf-savings" className="bf-bubble-surface bf-block">
       <div id="bf-savings__container">
         <div id="bf-savings__header">
           <div id="bf-savings__header-left">

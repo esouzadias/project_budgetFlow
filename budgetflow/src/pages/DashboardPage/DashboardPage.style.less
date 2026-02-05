@@ -1,14 +1,15 @@
-@import "../../styles/Globals.less";
+@import '../../styles/Globals.less';
 
 #dashboard-page {
   #dashboard-page-container {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
     padding: 20px @widthPadding;
+    align-items: stretch;
   }
 
-  #dashboard-overview-graph {
-    width: 100%;
+  .bf-dashboard__block {
+    min-width: 0;
   }
 }

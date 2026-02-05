@@ -685,10 +685,10 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
                                       onClick={() => updateRow(row.id, { recurring: !row.recurring })}
                                       className="bf-icon-btn"
                                       sx={{
-                                        color: row.recurring ? row.color : 'text.secondary',
-                                        opacity: row.recurring ? 1 : 0.85,
-                                        transition: 'opacity 160ms ease, color 160ms ease',
-                                        '&:hover': { opacity: 1 },
+                                        color: row.recurring ? 'var(--bf-primary)' : 'text.secondary',
+                                        opacity: 1,
+                                        transition: 'transform 120ms var(--bf-ease), opacity 160ms ease, color 160ms ease',
+                                        '&:hover': { opacity: 1, transform: 'translateY(-1px) scale(1.04)' },
                                       }}
                                     >
                                       <RepeatIcon fontSize="small" />

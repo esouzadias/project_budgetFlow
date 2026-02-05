@@ -1,5 +1,8 @@
-/* VARIABLES */
-//Colors (legacy less vars - keep for compatibility if some files still use them)
+/* ===========================================
+   Globals.less — BudgetFlow Design System
+   =========================================== */
+
+/* VARIABLES (legacy - keep) */
 @primary: #2563eb;
 @primary-dark: #1e40af;
 @secondary: #10b981;
@@ -10,111 +13,136 @@
 @error: #ef4444;
 @error-dark: #b91c1c;
 
-//Fonts
 @font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 
-// Base spacing tokens (keep)
+// Keep your layout vars
 @fullPadding: 80px;
 @heightPadding: 40px;
 @widthPadding: 40px;
 @margin: 10px;
 @borderRound: 50px;
 
-/* BASE */
 :root {
   font-family: @font-family;
 
   /* Radii */
-  --bf-radius-sm: 10px;
-  --bf-radius-md: 14px;
-  --bf-radius-lg: 18px;
-  --bf-radius-xl: 22px;
+  --bf-radius-sm: 50px;
+  --bf-radius-md: 50px;
+  --bf-radius-lg: 50px;
   --bf-radius-pill: 999px;
 
-  /* Core colors */
-  --bf-bg: #ffffff;
-  --bf-text: rgba(15, 23, 42, 0.92);
-  --bf-text-muted: rgba(15, 23, 42, 0.62);
+  /* Brand */
+  --bf-primary: #1a73e8;
+  --bf-primary-2: #2563eb;
+  --bf-success: #10b981;
+  --bf-danger: #ef4444;
+  --bf-warn: #f59e0b;
 
+  /* Base */
+  --bf-bg: #f3f5fb;
+  --bf-text: rgba(15, 23, 42, 0.92);
+  --bf-muted: rgba(15, 23, 42, 0.62);
+
+  /* Borders */
   --bf-border: rgba(15, 23, 42, 0.12);
   --bf-border-strong: rgba(15, 23, 42, 0.18);
 
-  /* Surfaces */
-  --bf-surface: rgba(255, 255, 255, 0.92);
-  --bf-surface-solid: #ffffff;
-  --bf-surface-2: rgba(37, 99, 235, 0.06);
-
-  /* Brand accents (Google/Revolut-ish) */
-  --bf-primary: #2563eb;
-  --bf-primary-2: #1a73e8;
-  --bf-primary-soft: rgba(37, 99, 235, 0.10);
-  --bf-primary-soft-2: rgba(37, 99, 235, 0.14);
-
-  --bf-success: #10b981;
-  --bf-success-soft: rgba(16, 185, 129, 0.14);
-
-  --bf-danger: #ef4444;
-  --bf-danger-soft: rgba(239, 68, 68, 0.14);
-
-  --bf-warn: #f59e0b;
-  --bf-warn-soft: rgba(245, 158, 11, 0.16);
+  /* Glass surfaces */
+  --bf-glass: rgba(255, 255, 255, 0.86);
+  --bf-glass-2: rgba(255, 255, 255, 0.72);
 
   /* Shadows */
-  --bf-shadow-sm: 0 6px 18px rgba(15, 23, 42, 0.08);
-  --bf-shadow-md: 0 12px 30px rgba(15, 23, 42, 0.10);
+  --bf-shadow-1: 0 8px 22px rgba(15, 23, 42, 0.08);
+  --bf-shadow-2: 0 16px 42px rgba(15, 23, 42, 0.12);
+  --bf-shadow-3: 0 22px 70px rgba(15, 23, 42, 0.16);
 
   /* Motion */
   --bf-ease: cubic-bezier(.2,.8,.2,1);
   --bf-fast: 140ms;
   --bf-med: 220ms;
 
-  /* Decorative gradients */
-  --bf-sheen: linear-gradient(120deg, rgba(37, 99, 235, 0.00), rgba(37, 99, 235, 0.10), rgba(16, 185, 129, 0.08));
-  --bf-sheen-soft: linear-gradient(90deg, rgba(37, 99, 235, 0.00), rgba(37, 99, 235, 0.10));
+  /* Surface tuning knobs (override per variant) */
+  --bf-surface-bg: var(--bf-glass);
+  --bf-surface-border: color-mix(in srgb, var(--bf-border) 85%, transparent);
+  --bf-surface-blur: 12px;
 }
 
-/* Optional dark mode foundation (activate later by setting body[data-theme="dark"]) */
-body[data-theme="dark"] {
-  --bf-bg: #0b1220;
-  --bf-text: rgba(248, 250, 252, 0.92);
-  --bf-text-muted: rgba(248, 250, 252, 0.62);
+* { box-sizing: border-box; }
 
-  --bf-border: rgba(248, 250, 252, 0.12);
-  --bf-border-strong: rgba(248, 250, 252, 0.18);
-
-  --bf-surface: rgba(15, 23, 42, 0.72);
-  --bf-surface-solid: #0f172a;
-  --bf-surface-2: rgba(37, 99, 235, 0.10);
-
-  --bf-shadow-sm: 0 10px 24px rgba(0, 0, 0, 0.35);
-  --bf-shadow-md: 0 18px 44px rgba(0, 0, 0, 0.42);
-}
-
-* {
-  box-sizing: border-box;
-}
+html, body { height: 100%; }
 
 body {
   margin: 0;
-  background: var(--bf-bg);
   color: var(--bf-text);
+  background: var(--bf-bg);
 }
 
-/* Generic bubbly surfaces */
+/* ===========================================
+   Core bubble / glass card
+   =========================================== */
 .bf-bubble-surface {
-  border-radius: var(--bf-radius-lg);
-  border: 1px solid var(--bf-border);
-  background: var(--bf-surface-solid);
-  box-shadow: var(--bf-shadow-sm);
-  transition: transform var(--bf-fast) var(--bf-ease), border-color var(--bf-fast) var(--bf-ease),
-    background-color var(--bf-fast) var(--bf-ease);
+  position: relative;
+  border-radius: @borderRound !important;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  background: var(--bf-surface-bg);
+  backdrop-filter: blur(var(--bf-surface-blur));
+  -webkit-backdrop-filter: blur(var(--bf-surface-blur));
+  box-shadow: var(--bf-shadow-1), inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  transition:
+    transform var(--bf-fast) var(--bf-ease),
+    box-shadow var(--bf-fast) var(--bf-ease),
+    border-color var(--bf-fast) var(--bf-ease);
+  overflow: hidden;
+  will-change: transform;
 }
 
-.bf-bubble-surface--soft {
-  background: var(--bf-surface-2);
+/* gradient border */
+/* Removed .bf-bubble-surface::before */
+
+/* inner wash */
+/* Removed .bf-bubble-surface::after */
+
+.bf-bubble-surface:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--bf-shadow-2);
+  border-color: rgba(26, 115, 232, 0.22);
 }
 
-/* Compact icon button (consistent) */
+.bf-bubble-surface:active {
+  transform: translateY(-1px);
+}
+
+.bf-bubble-surface > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* block padding helper */
+.bf-block { padding: 14px; }
+
+/* ===========================================
+   Surface variants
+   =========================================== */
+
+.bf-bubble-surface--data {
+  --bf-surface-bg: rgba(255, 255, 255, 0.92);
+  --bf-surface-border: rgba(15, 23, 42, 0.12);
+  --bf-surface-blur: 8px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+/* Removed .bf-bubble-surface--data::marker */
+/* Removed .bf-bubble-surface--data .bf-block */
+/* Removed .bf-bubble-surface--data .bf-block::before */
+
+/* Stronger hover for data blocks (gives depth) */
+.bf-bubble-surface--data:hover {
+  box-shadow: var(--bf-shadow-3);
+}
+
+/* ===========================================
+   Buttons / Pills / Cells
+   =========================================== */
 .bf-icon-btn {
   width: 30px;
   height: 30px;
@@ -122,49 +150,41 @@ body {
   border: 1px solid transparent;
   display: inline-grid;
   place-items: center;
-  transition: background-color var(--bf-fast) var(--bf-ease), border-color var(--bf-fast) var(--bf-ease),
-    transform 120ms var(--bf-ease);
+  transition:
+    transform 120ms var(--bf-ease),
+    background-color var(--bf-fast) var(--bf-ease),
+    border-color var(--bf-fast) var(--bf-ease);
 }
 
 .bf-icon-btn:hover {
-  background: rgba(15, 23, 42, 0.04);
-  border-color: var(--bf-border);
-  transform: translateY(-1px) scale(1.03);
+  transform: translateY(-1px) scale(1.04);
+  background: rgba(15, 23, 42, 0.05);
+  border-color: rgba(15, 23, 42, 0.12);
 }
 
-body[data-theme="dark"] .bf-icon-btn:hover {
-  background: rgba(248, 250, 252, 0.06);
+.bf-icon-btn:active {
+  transform: translateY(0px) scale(1.02);
 }
 
-/* Pill button */
 .bf-pill {
   padding: 4px 10px;
   border-radius: var(--bf-radius-pill);
-  border: 1px solid var(--bf-border);
-  background: rgba(15, 23, 42, 0.03);
-  transition: background-color var(--bf-fast) var(--bf-ease), border-color var(--bf-fast) var(--bf-ease),
-    transform 120ms var(--bf-ease);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  background: rgba(255, 255, 255, 0.65);
+  transition:
+    transform 120ms var(--bf-ease),
+    background-color var(--bf-fast) var(--bf-ease),
+    border-color var(--bf-fast) var(--bf-ease);
 }
 
 .bf-pill:hover {
-  background: rgba(15, 23, 42, 0.06);
-  border-color: var(--bf-border-strong);
   transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(15, 23, 42, 0.14);
 }
 
-body[data-theme="dark"] .bf-pill {
-  background: rgba(248, 250, 252, 0.06);
-}
+.bf-pill__text { font-weight: 800; }
 
-body[data-theme="dark"] .bf-pill:hover {
-  background: rgba(248, 250, 252, 0.10);
-}
-
-.bf-pill__text {
-  font-weight: 800;
-}
-
-/* Read-only cell (turns into input on edit) */
 .bf-cell {
   width: 100%;
   min-height: 40px;
@@ -173,39 +193,50 @@ body[data-theme="dark"] .bf-pill:hover {
   border: 1px solid transparent;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
   gap: 8px;
   cursor: text;
-  transition: background-color var(--bf-fast) var(--bf-ease), border-color var(--bf-fast) var(--bf-ease);
+  transition:
+    background-color var(--bf-fast) var(--bf-ease),
+    border-color var(--bf-fast) var(--bf-ease),
+    transform 120ms var(--bf-ease);
 }
 
 .bf-cell:hover {
-  background: rgba(15, 23, 42, 0.03);
-  border-color: rgba(15, 23, 42, 0.08);
-}
-
-body[data-theme="dark"] .bf-cell:hover {
-  background: rgba(248, 250, 252, 0.06);
-  border-color: rgba(248, 250, 252, 0.10);
+  background: rgba(255, 255, 255, 0.70);
+  border-color: rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
 }
 
 .bf-cell__placeholder {
-  color: var(--bf-text-muted);
+  color: var(--bf-muted);
   opacity: 0.9;
 }
 
 .bf-row--active {
-  background: var(--bf-primary-soft) !important;
+  background: rgba(26, 115, 232, 0.10) !important;
 }
 
-/* Subtle “interactive” hint */
+/* Subtle edit hint */
 .bf-edit-hint {
   opacity: 0;
   transform: translateY(1px);
   transition: opacity var(--bf-fast) var(--bf-ease), transform var(--bf-fast) var(--bf-ease);
 }
-
-*:hover > .bf-edit-hint {
+.bf-savings__editable:hover .bf-edit-hint,
+.bf-registry-table .bf-cell:hover + .bf-edit-hint {
   opacity: 1;
   transform: translateY(0);
 }
+
+/* ===========================================
+   Small global helpers (optional)
+   =========================================== */
+.bf-glow-primary {
+  box-shadow: 0 0 0 6px rgba(26,115,232,0.10);
+}
+
+/* Selection polish */
+::selection {
+  background: rgba(26, 115, 232, 0.18);
+}
+

@@ -1,27 +1,47 @@
 @import "../../styles/Globals.less";
 
 .bf-registry-table {
+  background: @background !important;
+  padding: 20px;
+  border-radius: var(--bf-radius-md) !important;
   .bf-registry-table__header {
-    margin-bottom: 16px;
-  }
-
-  .bf-registry-table__header-left,
-  .bf-registry-table__header-right {
-    min-width: 0;
+    margin-bottom: 12px;
   }
 
   .bf-registry-table__surface {
     overflow: visible;
-    border-color: var(--bf-border) !important;
-    background: var(--bf-surface-solid) !important;
+    border-color: rgba(26, 115, 232, 0.10) !important;
+    background: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: none !important;
+    overflow: hidden;
+
+    .MuiTable-root {
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+  }
+
+  /* Make rows feel more “cardy” */
+  .MuiTableRow-root {
+    transition: background-color var(--bf-fast) var(--bf-ease),
+      transform 120ms var(--bf-ease);
+  }
+
+  .MuiTableRow-root:hover {
+    background: rgba(26, 115, 232, 0.04) !important;
+    transform: translateY(-1px);
   }
 
   .bf-registry-table__drag-handle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     cursor: grab;
-    color: var(--bf-text-muted);
+    color: var(--bf-muted);
+    transition: transform 120ms var(--bf-ease);
+  }
+
+  .bf-registry-table__drag-handle:hover {
+    transform: scale(1.06);
   }
 
   .bf-registry-table__icon-btn {
@@ -35,31 +55,21 @@
   }
 
   .bf-registry-table__icon-btn:hover {
-    transform: translateY(-1px) scale(1.05);
+    transform: translateY(-1px) scale(1.06);
   }
 
   .bf-registry-table__header-pills {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
   }
 
-  .bf-registry-table__actions {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
   .bf-registry-table__actions-inner {
-    display: flex;
+    display: inline-flex;
     justify-content: center;
     align-items: center;
-    gap: 4px;
-  }
-
-  .bf-registry-table__preview-wrap {
-    display: inline-flex;
+    gap: 6px;
   }
 
   .bf-registry-table__cell-input {
