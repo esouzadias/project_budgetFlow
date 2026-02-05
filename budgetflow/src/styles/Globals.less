@@ -1,5 +1,5 @@
 /* VARIABLES */
-//Colors
+//Colors (legacy less vars - keep for compatibility if some files still use them)
 @primary: #2563eb;
 @primary-dark: #1e40af;
 @secondary: #10b981;
@@ -11,18 +11,83 @@
 @error-dark: #b91c1c;
 
 //Fonts
-@font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+@font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 
-// Base styles
+// Base spacing tokens (keep)
 @fullPadding: 80px;
 @heightPadding: 40px;
 @widthPadding: 40px;
 @margin: 10px;
 @borderRound: 50px;
 
-
+/* BASE */
 :root {
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-family: @font-family;
+
+  /* Radii */
+  --bf-radius-sm: 10px;
+  --bf-radius-md: 14px;
+  --bf-radius-lg: 18px;
+  --bf-radius-xl: 22px;
+  --bf-radius-pill: 999px;
+
+  /* Core colors */
+  --bf-bg: #ffffff;
+  --bf-text: rgba(15, 23, 42, 0.92);
+  --bf-text-muted: rgba(15, 23, 42, 0.62);
+
+  --bf-border: rgba(15, 23, 42, 0.12);
+  --bf-border-strong: rgba(15, 23, 42, 0.18);
+
+  /* Surfaces */
+  --bf-surface: rgba(255, 255, 255, 0.92);
+  --bf-surface-solid: #ffffff;
+  --bf-surface-2: rgba(37, 99, 235, 0.06);
+
+  /* Brand accents (Google/Revolut-ish) */
+  --bf-primary: #2563eb;
+  --bf-primary-2: #1a73e8;
+  --bf-primary-soft: rgba(37, 99, 235, 0.10);
+  --bf-primary-soft-2: rgba(37, 99, 235, 0.14);
+
+  --bf-success: #10b981;
+  --bf-success-soft: rgba(16, 185, 129, 0.14);
+
+  --bf-danger: #ef4444;
+  --bf-danger-soft: rgba(239, 68, 68, 0.14);
+
+  --bf-warn: #f59e0b;
+  --bf-warn-soft: rgba(245, 158, 11, 0.16);
+
+  /* Shadows */
+  --bf-shadow-sm: 0 6px 18px rgba(15, 23, 42, 0.08);
+  --bf-shadow-md: 0 12px 30px rgba(15, 23, 42, 0.10);
+
+  /* Motion */
+  --bf-ease: cubic-bezier(.2,.8,.2,1);
+  --bf-fast: 140ms;
+  --bf-med: 220ms;
+
+  /* Decorative gradients */
+  --bf-sheen: linear-gradient(120deg, rgba(37, 99, 235, 0.00), rgba(37, 99, 235, 0.10), rgba(16, 185, 129, 0.08));
+  --bf-sheen-soft: linear-gradient(90deg, rgba(37, 99, 235, 0.00), rgba(37, 99, 235, 0.10));
+}
+
+/* Optional dark mode foundation (activate later by setting body[data-theme="dark"]) */
+body[data-theme="dark"] {
+  --bf-bg: #0b1220;
+  --bf-text: rgba(248, 250, 252, 0.92);
+  --bf-text-muted: rgba(248, 250, 252, 0.62);
+
+  --bf-border: rgba(248, 250, 252, 0.12);
+  --bf-border-strong: rgba(248, 250, 252, 0.18);
+
+  --bf-surface: rgba(15, 23, 42, 0.72);
+  --bf-surface-solid: #0f172a;
+  --bf-surface-2: rgba(37, 99, 235, 0.10);
+
+  --bf-shadow-sm: 0 10px 24px rgba(0, 0, 0, 0.35);
+  --bf-shadow-md: 0 18px 44px rgba(0, 0, 0, 0.42);
 }
 
 * {
@@ -31,36 +96,18 @@
 
 body {
   margin: 0;
-  background: @background;
-  color: @text-color;
-}
-
-
-/* BUDGETFLOW UI TOKENS */
-:root {
-  --bf-radius-sm: 10px;
-  --bf-radius-md: 14px;
-  --bf-radius-lg: 18px;
-  --bf-radius-pill: 999px;
-
-  --bf-border: rgba(15, 23, 42, 0.12);
-  --bf-border-strong: rgba(15, 23, 42, 0.18);
-
-  --bf-surface: #ffffff;
-  --bf-surface-2: rgba(37, 99, 235, 0.06);
-
-  --bf-primary: #1a73e8;
-  --bf-primary-soft: rgba(26, 115, 232, 0.10);
-  --bf-primary-soft-2: rgba(26, 115, 232, 0.14);
-
-  --bf-text-muted: rgba(15, 23, 42, 0.65);
+  background: var(--bf-bg);
+  color: var(--bf-text);
 }
 
 /* Generic bubbly surfaces */
 .bf-bubble-surface {
   border-radius: var(--bf-radius-lg);
   border: 1px solid var(--bf-border);
-  background: var(--bf-surface);
+  background: var(--bf-surface-solid);
+  box-shadow: var(--bf-shadow-sm);
+  transition: transform var(--bf-fast) var(--bf-ease), border-color var(--bf-fast) var(--bf-ease),
+    background-color var(--bf-fast) var(--bf-ease);
 }
 
 .bf-bubble-surface--soft {
@@ -75,13 +122,18 @@ body {
   border: 1px solid transparent;
   display: inline-grid;
   place-items: center;
-  transition: background-color 140ms ease, border-color 140ms ease, transform 120ms ease;
+  transition: background-color var(--bf-fast) var(--bf-ease), border-color var(--bf-fast) var(--bf-ease),
+    transform 120ms var(--bf-ease);
 }
 
 .bf-icon-btn:hover {
   background: rgba(15, 23, 42, 0.04);
   border-color: var(--bf-border);
-  transform: scale(1.03);
+  transform: translateY(-1px) scale(1.03);
+}
+
+body[data-theme="dark"] .bf-icon-btn:hover {
+  background: rgba(248, 250, 252, 0.06);
 }
 
 /* Pill button */
@@ -90,12 +142,22 @@ body {
   border-radius: var(--bf-radius-pill);
   border: 1px solid var(--bf-border);
   background: rgba(15, 23, 42, 0.03);
-  transition: background-color 140ms ease, border-color 140ms ease;
+  transition: background-color var(--bf-fast) var(--bf-ease), border-color var(--bf-fast) var(--bf-ease),
+    transform 120ms var(--bf-ease);
 }
 
 .bf-pill:hover {
   background: rgba(15, 23, 42, 0.06);
   border-color: var(--bf-border-strong);
+  transform: translateY(-1px);
+}
+
+body[data-theme="dark"] .bf-pill {
+  background: rgba(248, 250, 252, 0.06);
+}
+
+body[data-theme="dark"] .bf-pill:hover {
+  background: rgba(248, 250, 252, 0.10);
 }
 
 .bf-pill__text {
@@ -114,6 +176,7 @@ body {
   justify-content: flex-start;
   gap: 8px;
   cursor: text;
+  transition: background-color var(--bf-fast) var(--bf-ease), border-color var(--bf-fast) var(--bf-ease);
 }
 
 .bf-cell:hover {
@@ -121,11 +184,28 @@ body {
   border-color: rgba(15, 23, 42, 0.08);
 }
 
+body[data-theme="dark"] .bf-cell:hover {
+  background: rgba(248, 250, 252, 0.06);
+  border-color: rgba(248, 250, 252, 0.10);
+}
+
 .bf-cell__placeholder {
   color: var(--bf-text-muted);
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 .bf-row--active {
   background: var(--bf-primary-soft) !important;
+}
+
+/* Subtle “interactive” hint */
+.bf-edit-hint {
+  opacity: 0;
+  transform: translateY(1px);
+  transition: opacity var(--bf-fast) var(--bf-ease), transform var(--bf-fast) var(--bf-ease);
+}
+
+*:hover > .bf-edit-hint {
+  opacity: 1;
+  transform: translateY(0);
 }

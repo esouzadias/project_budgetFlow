@@ -1,30 +1,9 @@
-import { Fragment, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  Badge,
-  Box,
-  ButtonBase,
-  ClickAwayListener,
-  Collapse,
-  IconButton,
-  InputAdornment,
-  Menu,
-  MenuItem,
-  Paper,
-  Popover,
-  Snackbar,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import type { JSX } from 'react';
+import './RegistryTable.style.less';
 
+import { Fragment, useMemo, useRef, useState } from 'react'; import { Alert, Badge, Box, ButtonBase, ClickAwayListener, Collapse, IconButton, InputAdornment, Menu, MenuItem, Paper, Popover, Snackbar, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Typography, } from '@mui/material';
+
+//Icons
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
@@ -36,28 +15,22 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RepeatIcon from '@mui/icons-material/Repeat';
+import IconSelectorMenu from '../IconSelectorMenu/IconSelectorMenu';
 
 import { DragDropContext, Draggable, Droppable, type DropResult } from '@hello-pangea/dnd';
-
 import TotalSumOverview from '../TotalSumOverview/TotalSumOverview';
-import IconSelectorMenu from '../IconSelectorMenu/IconSelectorMenu';
 import { ICON_OPTIONS, COLOR_PRESETS } from '../IconSelectorMenu/IconSelectorMenu.db';
-
-import type {
-  Category,
-  CurrencyOption,
-  DecimalSeparator,
-  RegistryRow,
-  ToastState,
-  TotalStep,
-} from './RegistryTable.types';
 import type { IconOption } from '../IconSelectorMenu/IconSelectorMenu.types';
+import type { Category, CurrencyOption, DecimalSeparator, RegistryRow, ToastState, TotalStep, } from './RegistryTable.types';
+
 
 type Props = {
   title: string;
   invertComparison?: boolean;
   icons?: IconOption[];
   colorPresets?: string[];
+  rows: RegistryRow[];
+  onChangeRows: (rows: RegistryRow[]) => void;
 };
 
 const CURRENCIES: CurrencyOption[] = [
@@ -66,32 +39,29 @@ const CURRENCIES: CurrencyOption[] = [
   { code: 'GBP', label: 'GBP (£)' },
   { code: 'BRL', label: 'BRL (R$)' },
 ];
-
 const PREVIEW_HEIGHT = 64;
 
-function createId() {
-  return crypto.randomUUID();
-}
+const createId = () => crypto.randomUUID();
 
-function getCurrencySymbol(currency: CurrencyOption['code']) {
+const getCurrencySymbol = (currency: CurrencyOption['code']) => {
   const parts = new Intl.NumberFormat('pt-PT', { style: 'currency', currency }).formatToParts(0);
   return parts.find((p) => p.type === 'currency')?.value ?? '';
-}
+};
 
-function parseNumber(value: string) {
+const parseNumber = (value: string) => {
   const normalized = value.replace(',', '.').replace(/[^\d.-]/g, '').trim();
   if (normalized === '' || normalized === '-' || normalized === '.') return null;
   const num = Number(normalized);
   return Number.isFinite(num) ? num : null;
-}
+};
 
-function toDisplayNumber(value: number | null, separator: DecimalSeparator) {
+const toDisplayNumber = (value: number | null, separator: DecimalSeparator) => {
   if (value === null) return '';
   const raw = String(value);
   return separator === ',' ? raw.replace('.', ',') : raw.replace(',', '.');
-}
+};
 
-function formatCurrency(value: number, currency: CurrencyOption['code'], separator: DecimalSeparator) {
+const formatCurrency = (value: number, currency: CurrencyOption['code'], separator: DecimalSeparator) => {
   const formatted = new Intl.NumberFormat('pt-PT', {
     style: 'currency',
     currency,
@@ -101,39 +71,37 @@ function formatCurrency(value: number, currency: CurrencyOption['code'], separat
 
   if (separator === ',') return formatted;
   return formatted.replace(/(\d),(\d{2})\b/, '$1.$2');
-}
+};
 
-function getComparison(amount: number | null, prev: number | null, invert: boolean) {
-  if (amount === null || prev === null) return { state: 'neutral' as const, diff: null };
+const getComparison = (amount: number | null, prev: number | null, invert: boolean) => {
+  if (amount === null || prev === null) return { state: 'neutral' as const, diff: null as number | null };
   const raw = amount - prev;
   const diff = invert ? -raw : raw;
   if (diff > 0) return { state: 'up' as const, diff };
   if (diff < 0) return { state: 'down' as const, diff };
   return { state: 'neutral' as const, diff: 0 };
-}
+};
 
-function reorder<T>(list: T[], startIndex: number, endIndex: number) {
+const reorder = <T,>(list: T[], startIndex: number, endIndex: number) => {
   const next = [...list];
   const [removed] = next.splice(startIndex, 1);
   next.splice(endIndex, 0, removed);
   return next;
-}
+};
 
-function createEmptyRow(defaultColor: string): RegistryRow {
-  return {
-    id: createId(),
-    label: 'New',
-    amount: null,
-    prevAmount: null,
-    note: '',
-    iconId: 'other',
-    color: defaultColor,
-    categories: [],
-    recurring: false,
-  };
-}
+const createEmptyRow = (defaultColor: string): RegistryRow => ({
+  id: createId(),
+  label: 'New',
+  amount: null,
+  prevAmount: null,
+  note: '',
+  iconId: 'other',
+  color: defaultColor,
+  categories: [],
+  recurring: false,
+});
 
-function buildTotalSteps(rows: RegistryRow[]): TotalStep[] {
+const buildTotalSteps = (rows: RegistryRow[]): TotalStep[] => {
   let running = 0;
   return rows
     .filter((r) => typeof r.amount === 'number')
@@ -146,36 +114,185 @@ function buildTotalSteps(rows: RegistryRow[]): TotalStep[] {
         running,
       };
     });
-}
+};
 
-function HeaderPillButton({
-  label,
-  onClick,
+const HeaderPillButton = ({ label, onClick, }: { label: string; onClick: (e: React.MouseEvent<HTMLElement>) => void; }) => (
+  <ButtonBase onClick={onClick} className="bf-pill">
+    <Typography variant="caption" className="bf-pill__text">
+      {label}
+    </Typography>
+  </ButtonBase>
+);
+
+const PreviewRow = ({ isOpen }: { isOpen: boolean }) => (
+  <TableRow>
+    <TableCell colSpan={7} sx={{ p: 0, borderBottom: isOpen ? undefined : 0 }}>
+      <Collapse in={isOpen} timeout={200} unmountOnExit collapsedSize={0}>
+        <Box
+          sx={{
+            height: PREVIEW_HEIGHT,
+            display: 'flex',
+            alignItems: 'center',
+            px: 2,
+            background: 'linear-gradient(to right, rgba(25,118,210,0), rgba(25,118,210,0.12))',
+            overflow: 'hidden',
+          }}
+        >
+          <Box sx={{ width: 28 }} />
+          <Box sx={{ flex: 1, display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ width: '34%', height: 34, borderRadius: 1.5, backgroundColor: 'rgba(0,0,0,0.10)' }} />
+            <Box sx={{ width: '18%', height: 34, borderRadius: 1.5, backgroundColor: 'rgba(0,0,0,0.10)' }} />
+            <Box sx={{ width: '18%', height: 34, borderRadius: 1.5, backgroundColor: 'rgba(0,0,0,0.10)' }} />
+            <Box sx={{ width: '12%', height: 34, borderRadius: 1.5, backgroundColor: 'rgba(0,0,0,0.10)' }} />
+          </Box>
+        </Box>
+      </Collapse>
+    </TableCell>
+  </TableRow>
+);
+
+const ComparisonCell = ({
+  amount,
+  prevAmount,
+  invert,
+  currency,
+  decimalSeparator,
 }: {
-  label: string;
-  onClick: (e: React.MouseEvent<HTMLElement>) => void;
-}) {
+  amount: number | null;
+  prevAmount: number | null;
+  invert: boolean;
+  currency: CurrencyOption['code'];
+  decimalSeparator: DecimalSeparator;
+}) => {
+  const meta = getComparison(amount, prevAmount, invert);
+
+  if (meta.diff === null) {
+    return (
+      <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ color: 'text.primary' }}>
+        <RemoveIcon fontSize="small" />
+      </Stack>
+    );
+  }
+
+  if (meta.state === 'up') {
+    return (
+      <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ color: 'success.main' }}>
+        <ArrowUpwardIcon fontSize="small" />
+        <Typography variant="body2">{formatCurrency(meta.diff, currency, decimalSeparator)}</Typography>
+      </Stack>
+    );
+  }
+
+  if (meta.state === 'down') {
+    return (
+      <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ color: 'error.main' }}>
+        <ArrowDownwardIcon fontSize="small" />
+        <Typography variant="body2">{formatCurrency(Math.abs(meta.diff), currency, decimalSeparator)}</Typography>
+      </Stack>
+    );
+  }
+
   return (
-    <ButtonBase onClick={onClick} className="bf-pill">
-      <Typography variant="caption" className="bf-pill__text">
-        {label}
-      </Typography>
-    </ButtonBase>
+    <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ color: 'text.primary' }}>
+      <RemoveIcon fontSize="small" />
+      <Typography variant="body2">{formatCurrency(0, currency, decimalSeparator)}</Typography>
+    </Stack>
   );
-}
+};
 
-export default function RegistryTable({
-  title,
-  invertComparison = false,
-  icons = ICON_OPTIONS,
-  colorPresets = COLOR_PRESETS,
-}: Props) {
+const NoteCell = ({ value, onSave }: { value: string; onSave: (nextValue: string) => void }) => {
+  const hasNote = value.trim().length > 0;
+  const badgeCount = hasNote ? 1 : 0;
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const open = Boolean(anchorEl);
+
+  const openPopover = (target: HTMLElement) => {
+    setAnchorEl(target);
+    setDraft(value);
+    setIsEditing(false);
+  };
+  const closePopover = () => {
+    setAnchorEl(null);
+    setIsEditing(false);
+    setDraft(value);
+  };
+  const startEdit = () => {
+    setIsEditing(true);
+    setDraft(value);
+  };
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setDraft(value);
+  };
+  const confirmEdit = () => {
+    onSave(draft.trim());
+    setIsEditing(false);
+    closePopover();
+  };
+
+  return (
+    <ClickAwayListener onClickAway={() => (open ? closePopover() : undefined)}>
+      <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span>
+          <Tooltip title="Adicionar Comentário" enterDelay={250} disableInteractive disableHoverListener={open} disableFocusListener={open} disableTouchListener={open} >
+            <Badge badgeContent={badgeCount} color={hasNote ? 'primary' : 'default'}>
+              <IconButton
+                size="small"
+                onClick={(e) => openPopover(e.currentTarget)}
+                className="bf-icon-btn"
+                sx={{
+                  color: hasNote ? 'primary.main' : 'text.secondary',
+                  opacity: hasNote ? 1 : 0.75,
+                  transition: 'opacity 120ms ease, color 120ms ease',
+                  '&:hover': { opacity: 1 },
+                }}
+              >
+                <EditNoteIcon fontSize="small" />
+              </IconButton>
+            </Badge>
+          </Tooltip>
+        </span>
+
+        <Popover open={open} anchorEl={anchorEl} onClose={closePopover} disableRestoreFocus anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} transformOrigin={{ vertical: 'top', horizontal: 'center' }} PaperProps={{ sx: { p: 1.25, width: 320, borderRadius: 12 } }} >
+          {!isEditing ? (<Stack direction="row" spacing={1} alignItems="center"> <Box sx={{ flex: 1, minWidth: 0 }}> <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', opacity: hasNote ? 1 : 0.55, color: hasNote ? 'text.primary' : 'text.secondary', }} > {hasNote ? value : 'Sem Comentários'} </Typography> </Box> <IconButton size="small" onClick={startEdit} className="bf-icon-btn"> <EditIcon fontSize="small" /> </IconButton> </Stack>) : (
+            <Stack spacing={1}>
+              <TextField
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') confirmEdit();
+                  if (e.key === 'Escape') cancelEdit();
+                }}
+                size="small"
+                fullWidth
+                autoFocus
+                multiline
+                minRows={2}
+                className="bf-registry-table__cell-input bf-registry-table__cell-input--compact"
+              />
+              <Stack direction="row" spacing={1} justifyContent="flex-end">
+                <IconButton size="small" onClick={confirmEdit} className="bf-icon-btn">
+                  <CheckIcon fontSize="small" />
+                </IconButton>
+                <IconButton size="small" onClick={cancelEdit} className="bf-icon-btn">
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </Stack>
+            </Stack>
+          )}
+        </Popover>
+      </Box>
+    </ClickAwayListener>
+  );
+};
+
+const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, colorPresets = COLOR_PRESETS, rows, onChangeRows }: Props): JSX.Element => {
   const defaultRowColor = colorPresets[0] ?? '#1a73e8';
-
-  const [editing, setEditing] = useState<{ rowId: string; field: 'label' | 'amount' | 'prevAmount' } | null>(null);
   const labelFocusRef = useRef<HTMLInputElement | null>(null);
-
-  const [rows, setRows] = useState<RegistryRow[]>([
+  const [editing, setEditing] = useState<{ rowId: string; field: 'label' | 'amount' | 'prevAmount' } | null>(null);
+  /* const [rows, setRows] = useState<RegistryRow[]>([
     {
       id: createId(),
       label: 'Paycheck',
@@ -209,8 +326,7 @@ export default function RegistryTable({
       categories: [],
       recurring: false,
     },
-  ]);
-
+  ]); */
   const [currency, setCurrency] = useState<CurrencyOption['code']>('EUR');
   const [decimalSeparator, setDecimalSeparator] = useState<DecimalSeparator>(',');
   const [currencyAnchor, setCurrencyAnchor] = useState<HTMLElement | null>(null);
@@ -218,7 +334,6 @@ export default function RegistryTable({
 
   const [rowEditor, setRowEditor] = useState<{ el: HTMLElement; rowId: string } | null>(null);
   const [previewRowId, setPreviewRowId] = useState<string | null>(null);
-
   const [toast, setToast] = useState<ToastState>({ open: false, message: '', severity: 'info' });
 
   const [categories, setCategories] = useState<Category[]>([
@@ -233,51 +348,67 @@ export default function RegistryTable({
   const totalSteps = useMemo(() => buildTotalSteps(rows), [rows]);
   const total = useMemo(() => (totalSteps.length ? totalSteps[totalSteps.length - 1].running : 0), [totalSteps]);
 
-  function showToast(message: string, severity: ToastState['severity'] = 'info') {
+  const showToast = (message: string, severity: ToastState['severity'] = 'info') => {
     setToast({ open: true, message, severity });
-  }
+  };
 
-  function updateRow(id: string, patch: Partial<RegistryRow>) {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-  }
+  const updateRow = (id: string, patch: Partial<RegistryRow>) => {
+    onChangeRows(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  };
+  const startEdit = (rowId: string, field: 'label' | 'amount' | 'prevAmount') => {
+    setEditing({ rowId, field });
 
-  function insertRowAt(index: number) {
+    if (field === 'label') {
+      queueMicrotask(() => {
+        labelFocusRef.current?.focus();
+        labelFocusRef.current?.select();
+      });
+    }
+  };
+
+  const stopEdit = () => {
+    setEditing(null);
+  };
+
+  const insertRowAt = (index: number) => {
     const nextRow = createEmptyRow(defaultRowColor);
-
-    setRows((prev) => {
-      const next = [...prev];
-      next.splice(index, 0, nextRow);
-      return next;
-    });
+    const next = [...rows];
+    next.splice(index, 0, nextRow);
+    onChangeRows(next);
 
     setPreviewRowId(null);
     setEditing({ rowId: nextRow.id, field: 'label' });
     showToast('Linha adicionada', 'success');
-  }
+  };
 
-  function removeRow(id: string) {
-    setRows((prev) => prev.filter((r) => r.id !== id));
+  const removeRow = (id: string) => {
+    onChangeRows(rows.filter((r) => r.id !== id));
     showToast('Linha removida', 'info');
-  }
+  };
 
-  function onDragEnd(result: DropResult) {
+  const onDragEnd = (result: DropResult) => {
     setPreviewRowId(null);
+
     const destinationIndex = result.destination?.index;
     if (destinationIndex === undefined) return;
+
     const sourceIndex = result.source.index;
     if (destinationIndex === sourceIndex) return;
-    setRows((prev) => reorder(prev, sourceIndex, destinationIndex));
-  }
 
-  function getIconRender(iconId: string) {
+    onChangeRows(reorder(rows, sourceIndex, destinationIndex));
+  };
+
+
+  const getIconRender = (iconId: string) => {
     const found = icons.find((i) => i.id === iconId);
     const fallback = icons.find((i) => i.id === 'other') ?? icons[0];
     return (found ?? fallback).render;
-  }
+  };
 
-  function createCategory(name: string) {
+  const createCategory = (name: string) => {
     const clean = name.trim();
     if (!clean) return;
+
     const exists = categories.some((c) => c.name.toLowerCase() === clean.toLowerCase());
     if (exists) return;
 
@@ -286,28 +417,13 @@ export default function RegistryTable({
       name: clean,
       color: colorPresets[categories.length % colorPresets.length] ?? defaultRowColor,
     };
-
     setCategories((prev) => [next, ...prev]);
-  }
-
-  function startEdit(rowId: string, field: 'label' | 'amount' | 'prevAmount') {
-    setEditing({ rowId, field });
-    if (field === 'label') {
-      queueMicrotask(() => {
-        labelFocusRef.current?.focus();
-        labelFocusRef.current?.select();
-      });
-    }
-  }
-
-  function stopEdit() {
-    setEditing(null);
-  }
+  };
 
   return (
-    <section>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        <Box>
+    <section className="bf-registry-table">
+      <Stack direction="row" alignItems="center" justifyContent="space-between" className="bf-registry-table__header">
+        <Box className="bf-registry-table__header-left">
           <Typography variant="h5" fontWeight={700}>
             {title}
           </Typography>
@@ -316,7 +432,7 @@ export default function RegistryTable({
           </Typography>
         </Box>
 
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} alignItems="center" className="bf-registry-table__header-right">
           <TotalSumOverview
             title="Soma"
             steps={totalSteps}
@@ -330,24 +446,27 @@ export default function RegistryTable({
         </Stack>
       </Stack>
 
-      <TableContainer component={Paper} variant="outlined" className="bf-bubble-surface" sx={{ overflow: 'visible' }}>
+      <TableContainer component={Paper} variant="outlined" className="bf-bubble-surface bf-registry-table__surface">
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId={`${title}-table`}>
             {(droppableProvided) => (
               <Table ref={droppableProvided.innerRef} {...droppableProvided.droppableProps} size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell width={44} align="center"></TableCell>
-                    <TableCell width={52} align="center"></TableCell>
+                    <TableCell width={44} align="center" />
+                    <TableCell width={52} align="center" />
                     <TableCell align="center">Descrição</TableCell>
 
                     <TableCell width={260} align="center">
-                      <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
+                      <div className="bf-registry-table__header-pills">
                         <Typography variant="inherit">Este mês</Typography>
 
                         <Tooltip title={currencyLabel}>
                           <Box>
-                            <HeaderPillButton label={currencySymbol} onClick={(e) => setCurrencyAnchor(e.currentTarget)} />
+                            <HeaderPillButton
+                              label={currencySymbol}
+                              onClick={(e) => setCurrencyAnchor(e.currentTarget)}
+                            />
                           </Box>
                         </Tooltip>
 
@@ -359,16 +478,19 @@ export default function RegistryTable({
                             />
                           </Box>
                         </Tooltip>
-                      </Stack>
+                      </div>
                     </TableCell>
 
                     <TableCell width={260} align="center">
-                      <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
+                      <div className="bf-registry-table__header-pills">
                         <Typography variant="inherit">Mês anterior</Typography>
 
                         <Tooltip title={currencyLabel}>
                           <Box>
-                            <HeaderPillButton label={currencySymbol} onClick={(e) => setCurrencyAnchor(e.currentTarget)} />
+                            <HeaderPillButton
+                              label={currencySymbol}
+                              onClick={(e) => setCurrencyAnchor(e.currentTarget)}
+                            />
                           </Box>
                         </Tooltip>
 
@@ -380,25 +502,22 @@ export default function RegistryTable({
                             />
                           </Box>
                         </Tooltip>
-                      </Stack>
+                      </div>
                     </TableCell>
 
                     <TableCell width={200} align="center">
                       Diferença
                     </TableCell>
 
-                    <TableCell width={220} align="center"></TableCell>
+                    <TableCell width={220} align="center" />
                   </TableRow>
                 </TableHead>
 
                 <TableBody>
                   {rows.map((row, index) => {
                     const IconComp = getIconRender(row.iconId);
-
-                    // ✅ volta ao azul quando recurring=true
-                    const recurringBg = row.recurring ? 'rgba(26,115,232,0.10)' : 'inherit';
+                    const rowBg = row.recurring ? 'rgba(26,115,232,0.10)' : 'inherit';
                     const isEditingRow = editing?.rowId === row.id;
-                    const activeRowClass = isEditingRow ? 'bf-row--active' : '';
 
                     return (
                       <Fragment key={row.id}>
@@ -408,13 +527,13 @@ export default function RegistryTable({
                               ref={draggableProvided.innerRef}
                               {...draggableProvided.draggableProps}
                               sx={{
-                                backgroundColor: draggableSnapshot.isDragging ? 'action.hover' : recurringBg,
+                                backgroundColor: draggableSnapshot.isDragging ? 'action.hover' : rowBg,
                               }}
-                              className={activeRowClass}
+                              className={isEditingRow ? 'bf-row--active' : undefined}
                             >
                               <TableCell align="center">
                                 <Tooltip title="Arrastar para reordenar" enterDelay={250}>
-                                  <span {...draggableProvided.dragHandleProps}>
+                                  <span {...draggableProvided.dragHandleProps} className="bf-registry-table__drag-handle">
                                     <DragIndicatorIcon fontSize="small" />
                                   </span>
                                 </Tooltip>
@@ -424,18 +543,11 @@ export default function RegistryTable({
                                 <Tooltip title="Customizar" enterDelay={250}>
                                   <ButtonBase
                                     onClick={(e) => setRowEditor({ el: e.currentTarget, rowId: row.id })}
+                                    className="bf-registry-table__icon-btn"
                                     sx={{
-                                      width: 28,
-                                      height: 28,
-                                      borderRadius: 999,
-                                      display: 'grid',
-                                      placeItems: 'center',
                                       backgroundColor: `${row.color}22`,
                                       border: `1px solid ${row.color}55`,
                                       color: row.color,
-                                      mx: 'auto',
-                                      transition: 'transform 120ms ease',
-                                      '&:hover': { transform: 'scale(1.05)' },
                                     }}
                                   >
                                     {IconComp({ fontSize: 'small' })}
@@ -460,11 +572,16 @@ export default function RegistryTable({
                                       labelFocusRef.current = el;
                                     }}
                                     autoFocus
+                                    className="bf-registry-table__cell-input"
                                   />
                                 ) : (
                                   <div className="bf-cell" onClick={() => startEdit(row.id, 'label')}>
                                     <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                      {(row.label || '').trim() ? row.label : <span className="bf-cell__placeholder">Ex: Paycheck</span>}
+                                      {(row.label || '').trim() ? (
+                                        row.label
+                                      ) : (
+                                        <span className="bf-cell__placeholder">Ex: Paycheck</span>
+                                      )}
                                     </Typography>
                                   </div>
                                 )}
@@ -487,6 +604,7 @@ export default function RegistryTable({
                                       startAdornment: <InputAdornment position="start">{currencySymbol}</InputAdornment>,
                                     }}
                                     autoFocus
+                                    className="bf-registry-table__cell-input"
                                   />
                                 ) : (
                                   <div className="bf-cell" onClick={() => startEdit(row.id, 'amount')}>
@@ -518,6 +636,7 @@ export default function RegistryTable({
                                       startAdornment: <InputAdornment position="start">{currencySymbol}</InputAdornment>,
                                     }}
                                     autoFocus
+                                    className="bf-registry-table__cell-input"
                                   />
                                 ) : (
                                   <div className="bf-cell" onClick={() => startEdit(row.id, 'prevAmount')}>
@@ -542,15 +661,19 @@ export default function RegistryTable({
                                 />
                               </TableCell>
 
-                              <TableCell align="center">
-                                <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
+                              <TableCell align="center" className="bf-registry-table__actions">
+                                <div className="bf-registry-table__actions-inner">
                                   <Box
-                                    sx={{ display: 'inline-flex' }}
+                                    className="bf-registry-table__preview-wrap"
                                     onMouseEnter={() => setPreviewRowId(row.id)}
                                     onMouseLeave={() => setPreviewRowId((prev) => (prev === row.id ? null : prev))}
                                   >
                                     <Tooltip title="Adicionar nova linha abaixo" enterDelay={250}>
-                                      <IconButton size="small" onClick={() => insertRowAt(index + 1)} className="bf-icon-btn">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => insertRowAt(index + 1)}
+                                        className="bf-icon-btn"
+                                      >
                                         <AddCircleOutlineIcon fontSize="small" />
                                       </IconButton>
                                     </Tooltip>
@@ -560,13 +683,13 @@ export default function RegistryTable({
                                     <IconButton
                                       size="small"
                                       onClick={() => updateRow(row.id, { recurring: !row.recurring })}
+                                      className="bf-icon-btn"
                                       sx={{
                                         color: row.recurring ? row.color : 'text.secondary',
                                         opacity: row.recurring ? 1 : 0.85,
                                         transition: 'opacity 160ms ease, color 160ms ease',
                                         '&:hover': { opacity: 1 },
                                       }}
-                                      className="bf-icon-btn"
                                     >
                                       <RepeatIcon fontSize="small" />
                                     </IconButton>
@@ -579,7 +702,7 @@ export default function RegistryTable({
                                       <DeleteOutlineIcon fontSize="small" />
                                     </IconButton>
                                   </Tooltip>
-                                </Stack>
+                                </div>
                               </TableCell>
                             </TableRow>
                           )}
@@ -659,217 +782,13 @@ export default function RegistryTable({
           onClose={() => setToast((t) => ({ ...t, open: false }))}
           severity={toast.severity}
           variant="filled"
-          sx={{ borderRadius: 3 }}
+          className="bf-registry-table__toast"
         >
           {toast.message}
         </Alert>
       </Snackbar>
     </section>
   );
-}
+};
 
-function PreviewRow({ isOpen }: { isOpen: boolean }) {
-  return (
-    <TableRow>
-      <TableCell colSpan={7} sx={{ p: 0, borderBottom: isOpen ? undefined : 0 }}>
-        <Collapse in={isOpen} timeout={200} unmountOnExit collapsedSize={0}>
-          <Box
-            sx={{
-              height: PREVIEW_HEIGHT,
-              display: 'flex',
-              alignItems: 'center',
-              px: 2,
-              background: 'linear-gradient(to right, rgba(25,118,210,0), rgba(25,118,210,0.12))',
-              overflow: 'hidden',
-            }}
-          >
-            <Box sx={{ width: 28 }} />
-            <Box sx={{ flex: 1, display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Box sx={{ width: '34%', height: 34, borderRadius: 1.5, backgroundColor: 'rgba(0,0,0,0.10)' }} />
-              <Box sx={{ width: '18%', height: 34, borderRadius: 1.5, backgroundColor: 'rgba(0,0,0,0.10)' }} />
-              <Box sx={{ width: '18%', height: 34, borderRadius: 1.5, backgroundColor: 'rgba(0,0,0,0.10)' }} />
-              <Box sx={{ width: '12%', height: 34, borderRadius: 1.5, backgroundColor: 'rgba(0,0,0,0.10)' }} />
-            </Box>
-          </Box>
-        </Collapse>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-function ComparisonCell({
-  amount,
-  prevAmount,
-  invert,
-  currency,
-  decimalSeparator,
-}: {
-  amount: number | null;
-  prevAmount: number | null;
-  invert: boolean;
-  currency: CurrencyOption['code'];
-  decimalSeparator: DecimalSeparator;
-}) {
-  const meta = getComparison(amount, prevAmount, invert);
-
-  if (meta.diff === null) {
-    return (
-      <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ color: 'text.primary' }}>
-        <RemoveIcon fontSize="small" />
-      </Stack>
-    );
-  }
-
-  if (meta.state === 'up') {
-    return (
-      <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ color: 'success.main' }}>
-        <ArrowUpwardIcon fontSize="small" />
-        <Typography variant="body2">{formatCurrency(meta.diff, currency, decimalSeparator)}</Typography>
-      </Stack>
-    );
-  }
-
-  if (meta.state === 'down') {
-    return (
-      <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ color: 'error.main' }}>
-        <ArrowDownwardIcon fontSize="small" />
-        <Typography variant="body2">{formatCurrency(Math.abs(meta.diff), currency, decimalSeparator)}</Typography>
-      </Stack>
-    );
-  }
-
-  return (
-    <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ color: 'text.primary' }}>
-      <RemoveIcon fontSize="small" />
-      <Typography variant="body2">{formatCurrency(0, currency, decimalSeparator)}</Typography>
-    </Stack>
-  );
-}
-
-function NoteCell({ value, onSave }: { value: string; onSave: (nextValue: string) => void }) {
-  const hasNote = value.trim().length > 0;
-  const badgeCount = hasNote ? 1 : 0;
-
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState(value);
-
-  const open = Boolean(anchorEl);
-
-  function openPopover(target: HTMLElement) {
-    setAnchorEl(target);
-    setDraft(value);
-    setIsEditing(false);
-  }
-
-  function closePopover() {
-    setAnchorEl(null);
-    setIsEditing(false);
-    setDraft(value);
-  }
-
-  function startEdit() {
-    setIsEditing(true);
-    setDraft(value);
-  }
-
-  function cancelEdit() {
-    setIsEditing(false);
-    setDraft(value);
-  }
-
-  function confirmEdit() {
-    onSave(draft.trim());
-    setIsEditing(false);
-    closePopover();
-  }
-
-  return (
-    <ClickAwayListener onClickAway={() => (open ? closePopover() : undefined)}>
-      <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span>
-          <Tooltip
-            title="Adicionar Comentário"
-            enterDelay={250}
-            disableInteractive
-            disableHoverListener={open}
-            disableFocusListener={open}
-            disableTouchListener={open}
-          >
-            <Badge badgeContent={badgeCount} color={hasNote ? 'primary' : 'default'}>
-              <IconButton
-                size="small"
-                onClick={(e) => openPopover(e.currentTarget)}
-                sx={{
-                  color: hasNote ? 'primary.main' : 'text.secondary',
-                  opacity: hasNote ? 1 : 0.75,
-                  transition: 'opacity 120ms ease, color 120ms ease',
-                  '&:hover': { opacity: 1 },
-                }}
-              >
-                <EditNoteIcon fontSize="small" />
-              </IconButton>
-            </Badge>
-          </Tooltip>
-        </span>
-
-        <Popover
-          open={open}
-          anchorEl={anchorEl}
-          onClose={closePopover}
-          disableRestoreFocus
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-          PaperProps={{ sx: { p: 1.25, width: 320 } }}
-        >
-          {!isEditing ? (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    opacity: hasNote ? 1 : 0.55,
-                    color: hasNote ? 'text.primary' : 'text.secondary',
-                  }}
-                >
-                  {hasNote ? value : 'Sem Comentários'}
-                </Typography>
-              </Box>
-
-              <IconButton size="small" onClick={startEdit}>
-                <EditIcon fontSize="small" />
-              </IconButton>
-            </Stack>
-          ) : (
-            <Stack spacing={1}>
-              <TextField
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') confirmEdit();
-                  if (e.key === 'Escape') cancelEdit();
-                }}
-                size="small"
-                fullWidth
-                autoFocus
-                multiline
-                minRows={2}
-              />
-
-              <Stack direction="row" spacing={1} justifyContent="flex-end">
-                <IconButton size="small" onClick={confirmEdit}>
-                  <CheckIcon fontSize="small" />
-                </IconButton>
-                <IconButton size="small" onClick={cancelEdit}>
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </Stack>
-            </Stack>
-          )}
-        </Popover>
-      </Box>
-    </ClickAwayListener>
-  );
-}
+export default RegistryTable;

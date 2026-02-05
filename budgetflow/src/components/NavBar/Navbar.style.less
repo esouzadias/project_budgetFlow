@@ -1,10 +1,22 @@
 @import "../../styles/Globals.less";
 
 #navbar {
-  background-color: cadetblue;
+  /* background-color: cadetblue; */
+  background-color: @background;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  min-height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 @widthPadding;
   box-shadow: 0 4px 5px rgba(0, 0, 0, 0.4);
+
   #navbar-container {
-    background-color: @background;
+    width: 100%;
+    height: 100%;
     display: flex;
     justify-content: space-between;
     align-items: center;
