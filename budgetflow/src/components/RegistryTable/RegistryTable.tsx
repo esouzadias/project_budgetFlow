@@ -423,14 +423,14 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
   return (
     <section className="bf-registry-table">
       <Stack direction="row" alignItems="center" justifyContent="space-between" className="bf-registry-table__header">
-        <Box className="bf-registry-table__header-left">
+        {/* <Box className="bf-registry-table__header-left">
           <Typography variant="h5" fontWeight={700}>
             {title}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Adiciona/remove linhas, edita valores e arrasta para mudar a ordem.
           </Typography>
-        </Box>
+        </Box> */}
 
         <Stack direction="row" spacing={1} alignItems="center" className="bf-registry-table__header-right">
           <TotalSumOverview

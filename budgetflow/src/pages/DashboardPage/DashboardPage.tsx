@@ -122,13 +122,13 @@ const DashboardPage = () => {
       ),
 
       "pie-earnings": (
-        <DragDropContainer id="pie-earnings" scope="dashboard" title="Top Earnings" onMove={onMoveBlock}>
+        <DragDropContainer id="pie-earnings" className="pie-menu" scope="dashboard" title="Top Earnings" onMove={onMoveBlock}>
           <Piechart rows={earningsRows} />
         </DragDropContainer>
       ),
 
       "pie-expenses": (
-        <DragDropContainer id="pie-expenses" scope="dashboard" title="Top Expenses" onMove={onMoveBlock}>
+        <DragDropContainer id="pie-expenses" className="pie-menu" scope="dashboard" title="Top Expenses" onMove={onMoveBlock}>
           <Piechart rows={expensesRows} />
         </DragDropContainer>
       ),

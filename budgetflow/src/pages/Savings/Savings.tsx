@@ -231,14 +231,14 @@ const Savings = ({ items, onChange }: Props) => {
     <section id="bf-savings" className="bf-bubble-surface bf-block">
       <div id="bf-savings__container">
         <div id="bf-savings__header">
-          <div id="bf-savings__header-left">
+          {/* <div id="bf-savings__header-left">
             <Typography variant="h5" fontWeight={800}>
               Savings
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Cria savings, define goal (opcional) e gere transações.
             </Typography>
-          </div>
+          </div> */}
           <Tooltip title="Add saving" enterDelay={250}>
             <IconButton className="bf-icon-btn" size="small" onClick={addSaving}>
               <AddCircleOutlineIcon fontSize="small" />
