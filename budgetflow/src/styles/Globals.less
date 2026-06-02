@@ -1,4 +1,5 @@
-/* ===========================================
+/* src/styles/Globals.less
+   ===========================================
    Globals.less — BudgetFlow Design System
    =========================================== */
 
@@ -67,6 +68,34 @@
   --bf-surface-blur: 12px;
 }
 
+/* ===========================================
+   Dark theme (toggle via <html data-bf-theme="dark">)
+   =========================================== */
+:root[data-bf-theme="dark"] {
+  /* Base */
+  --bf-bg: #0b1220;
+  --bf-text: rgba(226, 232, 240, 0.92);
+  --bf-muted: rgba(226, 232, 240, 0.62);
+
+  /* Borders */
+  --bf-border: rgba(226, 232, 240, 0.14);
+  --bf-border-strong: rgba(226, 232, 240, 0.22);
+
+  /* Glass surfaces */
+  --bf-glass: rgba(17, 24, 39, 0.72);
+  --bf-glass-2: rgba(17, 24, 39, 0.56);
+
+  /* Shadows */
+  --bf-shadow-1: 0 8px 22px rgba(0, 0, 0, 0.35);
+  --bf-shadow-2: 0 16px 42px rgba(0, 0, 0, 0.45);
+  --bf-shadow-3: 0 22px 70px rgba(0, 0, 0, 0.55);
+
+  /* Surface tuning */
+  --bf-surface-bg: var(--bf-glass);
+  --bf-surface-border: color-mix(in srgb, var(--bf-border) 85%, transparent);
+  --bf-surface-blur: 12px;
+}
+
 * { box-sizing: border-box; }
 
 html, body { height: 100%; }
@@ -96,12 +125,6 @@ body {
   will-change: transform;
 }
 
-/* gradient border */
-/* Removed .bf-bubble-surface::before */
-
-/* inner wash */
-/* Removed .bf-bubble-surface::after */
-
 .bf-bubble-surface:hover {
   transform: translateY(-2px);
   box-shadow: var(--bf-shadow-2);
@@ -118,12 +141,22 @@ body {
 }
 
 /* block padding helper */
-.bf-block { padding: 14px; }
+.bf-block { padding: 14px; height: 100%; }
+
+/* Dark tweaks for bubble */
+:root[data-bf-theme="dark"] .bf-bubble-surface {
+  border-color: rgba(226, 232, 240, 0.12);
+  box-shadow: var(--bf-shadow-1), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+:root[data-bf-theme="dark"] .bf-bubble-surface:hover {
+  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow: var(--bf-shadow-2);
+}
 
 /* ===========================================
    Surface variants
    =========================================== */
-
 .bf-bubble-surface--data {
   --bf-surface-bg: rgba(255, 255, 255, 0.92);
   --bf-surface-border: rgba(15, 23, 42, 0.12);
@@ -131,13 +164,15 @@ body {
   box-shadow: 0 10px 26px rgba(15, 23, 42, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.75);
 }
 
-/* Removed .bf-bubble-surface--data::marker */
-/* Removed .bf-bubble-surface--data .bf-block */
-/* Removed .bf-bubble-surface--data .bf-block::before */
-
-/* Stronger hover for data blocks (gives depth) */
 .bf-bubble-surface--data:hover {
   box-shadow: var(--bf-shadow-3);
+}
+
+:root[data-bf-theme="dark"] .bf-bubble-surface--data {
+  --bf-surface-bg: rgba(17, 24, 39, 0.78);
+  --bf-surface-border: rgba(226, 232, 240, 0.12);
+  --bf-surface-blur: 8px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* ===========================================
@@ -166,6 +201,11 @@ body {
   transform: translateY(0px) scale(1.02);
 }
 
+:root[data-bf-theme="dark"] .bf-icon-btn:hover {
+  background: rgba(226, 232, 240, 0.06);
+  border-color: rgba(226, 232, 240, 0.14);
+}
+
 .bf-pill {
   padding: 4px 10px;
   border-radius: var(--bf-radius-pill);
@@ -181,6 +221,16 @@ body {
   transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.82);
   border-color: rgba(15, 23, 42, 0.14);
+}
+
+:root[data-bf-theme="dark"] .bf-pill {
+  background: rgba(17, 24, 39, 0.55);
+  border-color: rgba(226, 232, 240, 0.12);
+}
+
+:root[data-bf-theme="dark"] .bf-pill:hover {
+  background: rgba(17, 24, 39, 0.72);
+  border-color: rgba(226, 232, 240, 0.18);
 }
 
 .bf-pill__text { font-weight: 800; }
@@ -207,6 +257,11 @@ body {
   transform: translateY(-1px);
 }
 
+:root[data-bf-theme="dark"] .bf-cell:hover {
+  background: rgba(226, 232, 240, 0.06);
+  border-color: rgba(226, 232, 240, 0.12);
+}
+
 .bf-cell__placeholder {
   color: var(--bf-muted);
   opacity: 0.9;
@@ -214,6 +269,10 @@ body {
 
 .bf-row--active {
   background: rgba(26, 115, 232, 0.10) !important;
+}
+
+:root[data-bf-theme="dark"] .bf-row--active {
+  background: rgba(59, 130, 246, 0.18) !important;
 }
 
 /* Subtle edit hint */
@@ -239,4 +298,3 @@ body {
 ::selection {
   background: rgba(26, 115, 232, 0.18);
 }
-

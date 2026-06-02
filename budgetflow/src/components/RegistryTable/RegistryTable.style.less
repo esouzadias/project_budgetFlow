@@ -1,47 +1,66 @@
+/* src/components/RegistryTable/RegistryTable.style.less */
 @import "../../styles/Globals.less";
 
 .bf-registry-table {
-  background: @background !important;
+  color: var(--bf-text);
+  background: transparent !important;
   padding: 20px;
   border-radius: var(--bf-radius-md) !important;
+
   .bf-registry-table__header {
     margin-bottom: 12px;
+
+    * {
+      color: var(--bf-text);
+    }
   }
 
   .bf-registry-table__surface {
-    overflow: visible;
-    border-color: rgba(26, 115, 232, 0.10) !important;
-    background: rgba(255, 255, 255, 0.65) !important;
+    overflow: hidden;
+
+    border-color: color-mix(in srgb, var(--bf-border) 85%, transparent) !important;
+    background: color-mix(in srgb, var(--bf-surface-bg) 92%, transparent) !important;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     box-shadow: none !important;
-    overflow: hidden;
 
     .MuiTable-root {
       border-collapse: separate;
       border-spacing: 0;
+      color: var(--bf-text);
+    }
+
+    .MuiTableCell-root {
+      color: var(--bf-text) !important;
+      border-bottom-color: color-mix(in srgb, var(--bf-border) 70%, transparent) !important;
+    }
+
+    .MuiTableHead-root {
+      .MuiTableCell-root {
+        color: var(--bf-text) !important;
+      }
     }
   }
 
-  /* Make rows feel more “cardy” */
   .MuiTableRow-root {
-    transition: background-color var(--bf-fast) var(--bf-ease),
+    transition:
+      background-color var(--bf-fast) var(--bf-ease),
       transform 120ms var(--bf-ease);
-  }
 
-  .MuiTableRow-root:hover {
-    background: rgba(26, 115, 232, 0.04) !important;
-    transform: translateY(-1px);
+    &:hover {
+      background: color-mix(in srgb, var(--bf-primary) 7%, transparent) !important;
+      transform: translateY(-1px);
+    }
   }
 
   .bf-registry-table__drag-handle {
     cursor: grab;
     color: var(--bf-muted);
     transition: transform 120ms var(--bf-ease);
-  }
 
-  .bf-registry-table__drag-handle:hover {
-    transform: scale(1.06);
+    &:hover {
+      transform: scale(1.06);
+    }
   }
 
   .bf-registry-table__icon-btn {
@@ -52,10 +71,11 @@
     place-items: center;
     margin: 0 auto;
     transition: transform 120ms var(--bf-ease);
-  }
+    color: var(--bf-text);
 
-  .bf-registry-table__icon-btn:hover {
-    transform: translateY(-1px) scale(1.06);
+    &:hover {
+      transform: translateY(-1px) scale(1.06);
+    }
   }
 
   .bf-registry-table__header-pills {
@@ -76,6 +96,11 @@
     .MuiInputBase-root {
       border-radius: var(--bf-radius-pill);
       min-height: 40px;
+      color: var(--bf-text);
+
+      input {
+        color: var(--bf-text);
+      }
     }
   }
 
@@ -85,7 +110,63 @@
     }
   }
 
+  .bf-registry-table__empty-cell {
+    height: 180px;
+    border-bottom: 0 !important;
+  }
+
+  .bf-registry-table__empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 160px;
+    color: var(--bf-muted);
+  }
+
+  .bf-registry-table__empty-title {
+    color: var(--bf-text);
+    font-weight: 700 !important;
+  }
+
+  .bf-registry-table__empty-description {
+    color: var(--bf-muted);
+  }
+
+  .bf-registry-table__empty-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    padding: 8px 12px;
+    color: var(--bf-text);
+  }
+
   .bf-registry-table__toast {
     border-radius: var(--bf-radius-md);
+  }
+}
+
+:root[data-bf-theme="dark"] {
+  .bf-registry-table {
+    .bf-registry-table__surface {
+      background: rgba(17, 24, 39, 0.62) !important;
+      border-color: rgba(226, 232, 240, 0.14) !important;
+
+      .MuiTableCell-root {
+        border-bottom-color: rgba(226, 232, 240, 0.12) !important;
+      }
+    }
+
+    .MuiStack-root, .bf-registry-table__actions-inner .MuiButtonBase-root {
+      color: var(--bf-text) !important;
+    }
+
+    .MuiTableRow-root {
+      &:hover {
+        background: rgba(59, 130, 246, 0.12) !important;
+      }
+    }
   }
 }

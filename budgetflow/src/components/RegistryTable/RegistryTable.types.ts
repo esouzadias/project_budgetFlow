@@ -34,6 +34,8 @@ export type RegistryRow = {
   note: string;
 
   iconId: IconId;
+  iconImageUrl?: string | null;
+
   color: string;
 
   categories: string[];

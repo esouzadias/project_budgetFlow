@@ -89,18 +89,6 @@ const reorder = <T,>(list: T[], startIndex: number, endIndex: number) => {
   return next;
 };
 
-const createEmptyRow = (defaultColor: string): RegistryRow => ({
-  id: createId(),
-  label: 'New',
-  amount: null,
-  prevAmount: null,
-  note: '',
-  iconId: 'other',
-  color: defaultColor,
-  categories: [],
-  recurring: false,
-});
-
 const buildTotalSteps = (rows: RegistryRow[]): TotalStep[] => {
   let running = 0;
   return rows
@@ -370,6 +358,22 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
     setEditing(null);
   };
 
+  const createEmptyRow = (defaultColor: string): RegistryRow => ({
+    id: createId(),
+    label: 'New',
+    amount: null,
+    prevAmount: null,
+    note: '',
+
+    iconId: 'other',
+    iconImageUrl: null,
+
+    color: defaultColor,
+
+    categories: [],
+    recurring: false,
+  });
+
   const insertRowAt = (index: number) => {
     const nextRow = createEmptyRow(defaultRowColor);
     const next = [...rows];
@@ -514,6 +518,27 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
                 </TableHead>
 
                 <TableBody>
+                  {rows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center" className="bf-registry-table__empty-cell">
+                        <div className="bf-registry-table__empty-state">
+                          <Typography variant="body2" className="bf-registry-table__empty-title">
+                            Ainda não há dados nesta tabela.
+                          </Typography>
+
+                          <Typography variant="caption" className="bf-registry-table__empty-description">
+                            Adiciona a primeira linha para começar a preencher {title.toLowerCase()}.
+                          </Typography>
+
+                          <ButtonBase className="bf-pill bf-registry-table__empty-action" onClick={() => insertRowAt(0)}>
+                            <AddCircleOutlineIcon fontSize="small" />
+                            <span>Adicionar primeira linha</span>
+                          </ButtonBase>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+
                   {rows.map((row, index) => {
                     const IconComp = getIconRender(row.iconId);
                     const rowBg = row.recurring ? 'rgba(26,115,232,0.10)' : 'inherit';

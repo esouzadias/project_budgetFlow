@@ -1,86 +1,86 @@
-import type { JSX } from 'react';
-import type { Category, RegistryRow } from '../RegistryTable/RegistryTable.types';
+import type { JSX } from "react";
+import type { Category, RegistryRow } from "../RegistryTable/RegistryTable.types";
 
 export type IconId =
-  | 'work'
-  | 'home'
-  | 'car'
-  | 'shopping'
-  | 'health'
-  | 'travel'
-  | 'food'
-  | 'groceries'
-  | 'coffee'
-  | 'pets'
-  | 'education'
-  | 'games'
-  | 'phone'
-  | 'subs'
-  | 'medical'
-  | 'fitness'
-  | 'atm'
-  | 'savings'
-  | 'offers'
-  | 'electricity'
-  | 'water'
-  | 'wifi'
-  | 'world'
-  | 'transport'
-  | 'mall'
-  | 'fastfood'
-  | 'bakery'
-  | 'dinner'
-  | 'icecream'
-  | 'gas'
-  | 'hospital'
-  | 'pharmacy'
-  | 'bar'
-  | 'movies'
-  | 'taxi'
-  | 'laundry'
-  | 'florist'
-  | 'pizza'
-  | 'drink'
-  | 'shipping'
-  | 'library'
-  | 'fire'
-  | 'police'
-  | 'post'
-  | 'airport'
-  | 'hotel'
-  | 'activity'
-  | 'bag'
-  | 'card'
-  | 'bank'
-  | 'paid'
-  | 'receipt'
-  | 'electric2'
-  | 'bus'
-  | 'bike'
-  | 'train'
-  | 'scooter'
-  | 'map'
-  | 'laptop'
-  | 'build'
-  | 'handyman'
-  | 'soccer'
-  | 'music'
-  | 'headphones'
-  | 'child'
-  | 'elderly'
-  | 'spa'
-  | 'chair'
-  | 'light'
-  | 'security'
-  | 'store'
-  | 'android'
-  | 'camera'
-  | 'other';
+  | "work"
+  | "home"
+  | "car"
+  | "shopping"
+  | "health"
+  | "travel"
+  | "food"
+  | "groceries"
+  | "coffee"
+  | "pets"
+  | "education"
+  | "games"
+  | "phone"
+  | "subs"
+  | "medical"
+  | "fitness"
+  | "atm"
+  | "savings"
+  | "offers"
+  | "electricity"
+  | "water"
+  | "wifi"
+  | "world"
+  | "transport"
+  | "mall"
+  | "fastfood"
+  | "bakery"
+  | "dinner"
+  | "icecream"
+  | "gas"
+  | "hospital"
+  | "pharmacy"
+  | "bar"
+  | "movies"
+  | "taxi"
+  | "laundry"
+  | "florist"
+  | "pizza"
+  | "drink"
+  | "shipping"
+  | "library"
+  | "fire"
+  | "police"
+  | "post"
+  | "airport"
+  | "hotel"
+  | "activity"
+  | "bag"
+  | "card"
+  | "bank"
+  | "paid"
+  | "receipt"
+  | "electric2"
+  | "bus"
+  | "bike"
+  | "train"
+  | "scooter"
+  | "map"
+  | "laptop"
+  | "build"
+  | "handyman"
+  | "soccer"
+  | "music"
+  | "headphones"
+  | "child"
+  | "elderly"
+  | "spa"
+  | "chair"
+  | "light"
+  | "security"
+  | "store"
+  | "android"
+  | "camera"
+  | "other";
 
 export type IconOption = {
   id: IconId;
   label: string;
-  render: (props?: { fontSize?: 'small' | 'medium' }) => JSX.Element;
+  render: (props?: { fontSize?: "small" | "medium" }) => JSX.Element;
 };
 
 export type IconSelectorMenuProps = {
@@ -97,4 +97,9 @@ export type IconSelectorMenuProps = {
   colorPresets: string[];
 
   onChange: (patch: Partial<RegistryRow>) => void;
+
+  title?: string;
+  showCategories?: boolean;
+  allowCustomImages?: boolean;
+  closeOnClickAway?: boolean;
 };
