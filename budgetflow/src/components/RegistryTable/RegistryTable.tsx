@@ -16,6 +16,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RepeatIcon from '@mui/icons-material/Repeat';
 import IconSelectorMenu from '../IconSelectorMenu/IconSelectorMenu';
+import GenericPopup from '../GenericPopup/GenericPopup';
 
 import { DragDropContext, Draggable, Droppable, type DropResult } from '@hello-pangea/dnd';
 import TotalSumOverview from '../TotalSumOverview/TotalSumOverview';
@@ -194,9 +195,11 @@ const NoteCell = ({ value, onSave }: { value: string; onSave: (nextValue: string
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(value);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
   const open = Boolean(anchorEl);
 
   const openPopover = (target: HTMLElement) => {
+    setTooltipOpen(false);
     setAnchorEl(target);
     setDraft(value);
     setIsEditing(false);
@@ -224,11 +227,24 @@ const NoteCell = ({ value, onSave }: { value: string; onSave: (nextValue: string
     <ClickAwayListener onClickAway={() => (open ? closePopover() : undefined)}>
       <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
         <span>
-          <Tooltip title="Adicionar Comentário" enterDelay={250} disableInteractive disableHoverListener={open} disableFocusListener={open} disableTouchListener={open} >
+          <Tooltip
+            title="Adicionar Comentário"
+            enterDelay={250}
+            disableInteractive
+            open={tooltipOpen && !open}
+            onOpen={() => setTooltipOpen(true)}
+            onClose={() => setTooltipOpen(false)}
+            disableHoverListener={open}
+            disableFocusListener={open}
+            disableTouchListener={open}
+          >
             <Badge badgeContent={badgeCount} color={hasNote ? 'primary' : 'default'}>
               <IconButton
                 size="small"
-                onClick={(e) => openPopover(e.currentTarget)}
+                onClick={(e) => {
+                  setTooltipOpen(false);
+                  openPopover(e.currentTarget);
+                }}
                 className="bf-icon-btn"
                 sx={{
                   color: hasNote ? 'primary.main' : 'text.secondary',
@@ -280,41 +296,6 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
   const defaultRowColor = colorPresets[0] ?? '#1a73e8';
   const labelFocusRef = useRef<HTMLInputElement | null>(null);
   const [editing, setEditing] = useState<{ rowId: string; field: 'label' | 'amount' | 'prevAmount' } | null>(null);
-  /* const [rows, setRows] = useState<RegistryRow[]>([
-    {
-      id: createId(),
-      label: 'Paycheck',
-      amount: 1200,
-      prevAmount: 1150,
-      note: '',
-      iconId: 'work',
-      color: defaultRowColor,
-      categories: ['Salary'],
-      recurring: false,
-    },
-    {
-      id: createId(),
-      label: 'Other',
-      amount: 284.84,
-      prevAmount: 320,
-      note: '',
-      iconId: 'other',
-      color: colorPresets[13] ?? '#34a853',
-      categories: ['Misc'],
-      recurring: false,
-    },
-    {
-      id: createId(),
-      label: 'Leftover',
-      amount: 55,
-      prevAmount: null,
-      note: '',
-      iconId: 'home',
-      color: colorPresets[4] ?? '#a142f4',
-      categories: [],
-      recurring: false,
-    },
-  ]); */
   const [currency, setCurrency] = useState<CurrencyOption['code']>('EUR');
   const [decimalSeparator, setDecimalSeparator] = useState<DecimalSeparator>(',');
   const [currencyAnchor, setCurrencyAnchor] = useState<HTMLElement | null>(null);
@@ -323,6 +304,7 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
   const [rowEditor, setRowEditor] = useState<{ el: HTMLElement; rowId: string } | null>(null);
   const [previewRowId, setPreviewRowId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>({ open: false, message: '', severity: 'info' });
+  const [rowIdPendingDelete, setRowIdPendingDelete] = useState<string | null>(null);
 
   const [categories, setCategories] = useState<Category[]>([
     { id: createId(), name: 'Salary', color: defaultRowColor },
@@ -335,6 +317,10 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
 
   const totalSteps = useMemo(() => buildTotalSteps(rows), [rows]);
   const total = useMemo(() => (totalSteps.length ? totalSteps[totalSteps.length - 1].running : 0), [totalSteps]);
+  const rowPendingDelete = useMemo(
+    () => rows.find((row) => row.id === rowIdPendingDelete) ?? null,
+    [rowIdPendingDelete, rows],
+  );
 
   const showToast = (message: string, severity: ToastState['severity'] = 'info') => {
     setToast({ open: true, message, severity });
@@ -364,12 +350,9 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
     amount: null,
     prevAmount: null,
     note: '',
-
     iconId: 'other',
     iconImageUrl: null,
-
     color: defaultColor,
-
     categories: [],
     recurring: false,
   });
@@ -385,9 +368,20 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
     showToast('Linha adicionada', 'success');
   };
 
-  const removeRow = (id: string) => {
-    onChangeRows(rows.filter((r) => r.id !== id));
+  const requestRemoveRow = (id: string) => {
+    setRowIdPendingDelete(id);
+  };
+
+  const confirmRemoveRow = () => {
+    if (!rowIdPendingDelete) return;
+
+    onChangeRows(rows.filter((row) => row.id !== rowIdPendingDelete));
+    setRowIdPendingDelete(null);
     showToast('Linha removida', 'info');
+  };
+
+  const cancelRemoveRow = () => {
+    setRowIdPendingDelete(null);
   };
 
   const onDragEnd = (result: DropResult) => {
@@ -401,7 +395,6 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
 
     onChangeRows(reorder(rows, sourceIndex, destinationIndex));
   };
-
 
   const getIconRender = (iconId: string) => {
     const found = icons.find((i) => i.id === iconId);
@@ -427,15 +420,6 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
   return (
     <section className="bf-registry-table">
       <Stack direction="row" alignItems="center" justifyContent="space-between" className="bf-registry-table__header">
-        {/* <Box className="bf-registry-table__header-left">
-          <Typography variant="h5" fontWeight={700}>
-            {title}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Adiciona/remove linhas, edita valores e arrasta para mudar a ordem.
-          </Typography>
-        </Box> */}
-
         <Stack direction="row" spacing={1} alignItems="center" className="bf-registry-table__header-right">
           <TotalSumOverview
             title="Soma"
@@ -450,7 +434,7 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
         </Stack>
       </Stack>
 
-      <TableContainer component={Paper} variant="outlined" className="bf-bubble-surface bf-registry-table__surface">
+      <TableContainer component={Paper} variant="outlined" className="bf-registry-table__surface">
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId={`${title}-table`}>
             {(droppableProvided) => (
@@ -458,62 +442,44 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
                 <TableHead>
                   <TableRow>
                     <TableCell width={44} align="center" />
-                    <TableCell width={52} align="center" />
-                    <TableCell align="center">Descrição</TableCell>
+                    <TableCell width={64} align="center">Icon</TableCell>
+                    <TableCell width={260}>Descrição</TableCell>
 
-                    <TableCell width={260} align="center">
-                      <div className="bf-registry-table__header-pills">
-                        <Typography variant="inherit">Este mês</Typography>
-
-                        <Tooltip title={currencyLabel}>
-                          <Box>
-                            <HeaderPillButton
-                              label={currencySymbol}
-                              onClick={(e) => setCurrencyAnchor(e.currentTarget)}
-                            />
-                          </Box>
-                        </Tooltip>
-
-                        <Tooltip title="Separador decimal">
-                          <Box>
-                            <HeaderPillButton
-                              label={decimalSeparator === ',' ? '1,23' : '1.23'}
-                              onClick={(e) => setDecimalAnchor(e.currentTarget)}
-                            />
-                          </Box>
-                        </Tooltip>
-                      </div>
+                    <TableCell width={220} align="center">
+                      Este mês
                     </TableCell>
 
-                    <TableCell width={260} align="center">
-                      <div className="bf-registry-table__header-pills">
-                        <Typography variant="inherit">Mês anterior</Typography>
-
-                        <Tooltip title={currencyLabel}>
-                          <Box>
-                            <HeaderPillButton
-                              label={currencySymbol}
-                              onClick={(e) => setCurrencyAnchor(e.currentTarget)}
-                            />
-                          </Box>
-                        </Tooltip>
-
-                        <Tooltip title="Separador decimal">
-                          <Box>
-                            <HeaderPillButton
-                              label={decimalSeparator === ',' ? '1,23' : '1.23'}
-                              onClick={(e) => setDecimalAnchor(e.currentTarget)}
-                            />
-                          </Box>
-                        </Tooltip>
-                      </div>
+                    <TableCell width={220} align="center">
+                      Mês anterior
                     </TableCell>
 
                     <TableCell width={200} align="center">
                       Diferença
                     </TableCell>
 
-                    <TableCell width={220} align="center" />
+                    <TableCell width={220} align="center">
+                      <div className="bf-registry-table__header-pills bf-registry-table__header-pills--controls">
+                        <div className="bf-registry-table__header-controls">
+                          <Tooltip title={currencyLabel}>
+                            <Box>
+                              <HeaderPillButton
+                                label={currencySymbol}
+                                onClick={(e) => setCurrencyAnchor(e.currentTarget)}
+                              />
+                            </Box>
+                          </Tooltip>
+
+                          <Tooltip title="Separador decimal">
+                            <Box>
+                              <HeaderPillButton
+                                label={decimalSeparator === ',' ? '1,23' : '1.23'}
+                                onClick={(e) => setDecimalAnchor(e.currentTarget)}
+                              />
+                            </Box>
+                          </Tooltip>
+                        </div>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 </TableHead>
 
@@ -573,6 +539,10 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
                                       backgroundColor: `${row.color}22`,
                                       border: `1px solid ${row.color}55`,
                                       color: row.color,
+                                      '& svg': {
+                                        color: row.color,
+                                        fill: 'currentColor',
+                                      },
                                     }}
                                   >
                                     {IconComp({ fontSize: 'small' })}
@@ -722,8 +692,8 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
 
                                   <NoteCell value={row.note} onSave={(nextValue) => updateRow(row.id, { note: nextValue })} />
 
-                                  <Tooltip title="Apagar linha" enterDelay={250}>
-                                    <IconButton onClick={() => removeRow(row.id)} size="small" className="bf-icon-btn">
+                                  <Tooltip title="Apagar linha" enterDelay={250} onClose={() => {}}>
+                                    <IconButton onClick={() => requestRemoveRow(row.id)} size="small" className="bf-icon-btn">
                                       <DeleteOutlineIcon fontSize="small" />
                                     </IconButton>
                                   </Tooltip>
@@ -745,6 +715,17 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
           </Droppable>
         </DragDropContext>
       </TableContainer>
+
+      <GenericPopup
+        open={Boolean(rowPendingDelete)}
+        title="Apagar linha?"
+        description={`Isto vai apagar permanentemente ${rowPendingDelete?.label?.trim() || 'esta linha'}.`}
+        confirmLabel="Apagar"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={confirmRemoveRow}
+        onCancel={cancelRemoveRow}
+      />
 
       <Menu anchorEl={currencyAnchor} open={Boolean(currencyAnchor)} onClose={() => setCurrencyAnchor(null)}>
         {CURRENCIES.map((c) => (

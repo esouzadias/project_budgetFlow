@@ -13,11 +13,13 @@ import {
 
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import Tooltip from "@mui/material/Tooltip";
 
 import IconSelectorMenu from "../IconSelectorMenu/IconSelectorMenu";
+import GenericPopup from "../GenericPopup/GenericPopup";
 import { COLOR_PRESETS, ICON_OPTIONS } from "../IconSelectorMenu/IconSelectorMenu.db";
 
 import type { IconId } from "../IconSelectorMenu/IconSelectorMenu.types";
@@ -58,6 +60,8 @@ type CustomFormulaBoxProps = {
   incomeRows?: RegistryRow[];
   expenseRows?: RegistryRow[];
   savingRows?: RegistryRow[];
+  customFormulaPanels?: FormulaPanel[];
+  onChangeCustomFormulaPanels?: (panels: FormulaPanel[]) => void;
 };
 
 const defaultPanels: FormulaPanel[] = [
@@ -253,8 +257,27 @@ const getInsertIndexFromPointer = (event: MouseEvent<HTMLDivElement>, tokenEleme
   return tokenElements.length;
 };
 
-const CustomFormulaBox = ({ incomeRows = [], expenseRows = [], savingRows = [] }: CustomFormulaBoxProps) => {
-  const [panels, setPanels] = useState<FormulaPanel[]>(defaultPanels);
+const CustomFormulaBox = ({
+  incomeRows = [],
+  expenseRows = [],
+  savingRows = [],
+  customFormulaPanels,
+  onChangeCustomFormulaPanels,
+}: CustomFormulaBoxProps) => {
+  const [internalPanels, setInternalPanels] = useState<FormulaPanel[]>(defaultPanels);
+  const isControlled = customFormulaPanels !== undefined;
+  const panels = isControlled ? customFormulaPanels : internalPanels;
+
+  const setPanels = (value: FormulaPanel[] | ((currentPanels: FormulaPanel[]) => FormulaPanel[])) => {
+    const nextPanels = typeof value === "function" ? value(panels) : value;
+
+    if (isControlled) {
+      onChangeCustomFormulaPanels?.(nextPanels);
+      return;
+    }
+
+    setInternalPanels(nextPanels);
+  };
   const [selectedPanelId, setSelectedPanelId] = useState("");
   const [draggedPanelId, setDraggedPanelId] = useState<string | null>(null);
   const [formulaTokens, setFormulaTokens] = useState<EditableFormulaToken[]>([]);
@@ -263,6 +286,7 @@ const CustomFormulaBox = ({ incomeRows = [], expenseRows = [], savingRows = [] }
   const [formulaInputFocused, setFormulaInputFocused] = useState(false);
   const [highlightedSuggestionIndex, setHighlightedSuggestionIndex] = useState(0);
   const [iconEditorAnchor, setIconEditorAnchor] = useState<HTMLElement | null>(null);
+  const [panelIdPendingDelete, setPanelIdPendingDelete] = useState<string | null>(null);
 
   const formulaInputRef = useRef<HTMLInputElement | null>(null);
   const formulaTokenRefs = useRef(new Map<string, HTMLButtonElement | HTMLSpanElement>());
@@ -313,6 +337,7 @@ const CustomFormulaBox = ({ incomeRows = [], expenseRows = [], savingRows = [] }
   }, [panels, incomeRows, expenseRows, savingRows]);
 
   const selectedPanel = panels.find((panel) => panel.id === selectedPanelId) ?? null;
+  const panelPendingDelete = panels.find((panel) => panel.id === panelIdPendingDelete) ?? null;
   const selectedPanelEvaluation = selectedPanel ? calculateExpression(selectedPanel.expression, variables) : null;
 
   const selectedIconOption = useMemo(() => {
@@ -600,14 +625,32 @@ const CustomFormulaBox = ({ incomeRows = [], expenseRows = [], savingRows = [] }
     focusFormulaInput();
   };
 
-  const deleteSelectedPanel = () => {
-    if (!selectedPanel) return;
+  const requestDeletePanel = (panelId: string) => {
+    if (panels.length <= 1) return;
+
+    setPanelIdPendingDelete(panelId);
+  };
+
+  const confirmDeletePanel = () => {
+    if (!panelIdPendingDelete || panels.length <= 1) return;
+
+    const panelId = panelIdPendingDelete;
 
     captureCardRects();
-    setPanels((currentPanels) => currentPanels.filter((panel) => panel.id !== selectedPanel.id));
-    setSelectedPanelId("");
-    setIconEditorAnchor(null);
-    setFormulaInsertIndex(null);
+    setPanels((currentPanels) => currentPanels.filter((panel) => panel.id !== panelId));
+    setPanelIdPendingDelete(null);
+
+    if (selectedPanelId === panelId) {
+      setSelectedPanelId("");
+      setIconEditorAnchor(null);
+      setFormulaTokens([]);
+      setFormulaInputValue("");
+      setFormulaInsertIndex(null);
+    }
+  };
+
+  const cancelDeletePanel = () => {
+    setPanelIdPendingDelete(null);
   };
 
   const movePanelByStep = (panelId: string, direction: -1 | 1) => {
@@ -728,23 +771,42 @@ const CustomFormulaBox = ({ incomeRows = [], expenseRows = [], savingRows = [] }
               }}
               type="button"
               draggable
-              className={`bf-custom-formula-box__card bf-custom-formula-box__card--${panel.accent} ${
-                draggedPanelId === panel.id ? "bf-custom-formula-box__card--dragging" : ""
-              }`}
+              className={`bf-custom-formula-box__card bf-custom-formula-box__card--${panel.accent} ${draggedPanelId === panel.id ? "bf-custom-formula-box__card--dragging" : ""
+                }`}
               onClick={() => openPanelEditor(panel)}
               onDragStart={() => handleDragStart(panel.id)}
               onDragOver={(event) => handleDragOver(event, panel.id)}
               onDragEnd={handleDragEnd}
             >
               <span className="bf-custom-formula-box__card-drag-pill" aria-hidden="true" />
+              {panels.length > 1 ? (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="bf-custom-formula-box__card-delete-button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    requestDeletePanel(panel.id);
+                  }}
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                    requestDeletePanel(panel.id);
+                  }}
+                >
+                  <DeleteOutlineRoundedIcon fontSize="small" />
+                </span>
+              ) : null}
 
               <span className="bf-custom-formula-box__mobile-order-controls" aria-label={`${panel.title} order controls`}>
                 <span
                   role="button"
                   tabIndex={0}
-                  className={`bf-custom-formula-box__mobile-order-button ${
-                    isFirstPanel ? "bf-custom-formula-box__mobile-order-button--disabled" : ""
-                  }`}
+                  className={`bf-custom-formula-box__mobile-order-button ${isFirstPanel ? "bf-custom-formula-box__mobile-order-button--disabled" : ""
+                    }`}
                   onClick={(event) => {
                     event.stopPropagation();
                     if (!isFirstPanel) movePanelByStep(panel.id, -1);
@@ -756,9 +818,8 @@ const CustomFormulaBox = ({ incomeRows = [], expenseRows = [], savingRows = [] }
                 <span
                   role="button"
                   tabIndex={0}
-                  className={`bf-custom-formula-box__mobile-order-button ${
-                    isLastPanel ? "bf-custom-formula-box__mobile-order-button--disabled" : ""
-                  }`}
+                  className={`bf-custom-formula-box__mobile-order-button ${isLastPanel ? "bf-custom-formula-box__mobile-order-button--disabled" : ""
+                    }`}
                   onClick={(event) => {
                     event.stopPropagation();
                     if (!isLastPanel) movePanelByStep(panel.id, 1);
@@ -787,12 +848,24 @@ const CustomFormulaBox = ({ incomeRows = [], expenseRows = [], savingRows = [] }
             </button>
           );
         })}
-
         <button type="button" className="bf-custom-formula-box__empty-card" onClick={addPanel}>
-          <AddRoundedIcon fontSize="small" />
-          <span>Add custom card</span>
+          <span className="bf-custom-formula-box__empty-card-icon">
+            <AddRoundedIcon fontSize="large" />
+          </span>
+          <span>Add formula</span>
         </button>
       </div>
+
+      <GenericPopup
+        open={Boolean(panelPendingDelete)}
+        title="Delete formula?"
+        description={`This will permanently delete ${panelPendingDelete?.title ?? "this formula"}.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={confirmDeletePanel}
+        onCancel={cancelDeletePanel}
+      />
 
       {selectedPanel ? (
         <div
@@ -898,9 +971,8 @@ const CustomFormulaBox = ({ incomeRows = [], expenseRows = [], savingRows = [] }
                             }
                           }}
                           type="button"
-                          className={`bf-custom-formula-box__formula-token ${
-                            tokenAccent ? `bf-custom-formula-box__formula-token--${tokenAccent}` : ""
-                          }`}
+                          className={`bf-custom-formula-box__formula-token ${tokenAccent ? `bf-custom-formula-box__formula-token--${tokenAccent}` : ""
+                            }`}
                           onClick={(event) => event.stopPropagation()}
                         >
                           <span className="bf-custom-formula-box__formula-token-text">{token.value}</span>
@@ -932,9 +1004,8 @@ const CustomFormulaBox = ({ incomeRows = [], expenseRows = [], savingRows = [] }
                     <button
                       key={`${variable.source}-${variable.key}`}
                       type="button"
-                      className={`bf-custom-formula-box__suggestion ${
-                        highlightedSuggestionIndex === variableIndex ? "bf-custom-formula-box__suggestion--active" : ""
-                      }`}
+                      className={`bf-custom-formula-box__suggestion ${highlightedSuggestionIndex === variableIndex ? "bf-custom-formula-box__suggestion--active" : ""
+                        }`}
                       onMouseDown={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -957,20 +1028,14 @@ const CustomFormulaBox = ({ incomeRows = [], expenseRows = [], savingRows = [] }
 
             <Tooltip title={selectedPanelEvaluation?.error ?? ""} disableHoverListener={!selectedPanelEvaluation?.error} arrow>
               <div
-                className={`bf-custom-formula-box__result-preview ${
-                  selectedPanelEvaluation?.error ? "bf-custom-formula-box__result-preview--invalid" : ""
-                }`}
+                className={`bf-custom-formula-box__result-preview ${selectedPanelEvaluation?.error ? "bf-custom-formula-box__result-preview--invalid" : ""
+                  }`}
               >
                 <span>Result</span>
                 <strong>{selectedPanelEvaluation?.value === null ? "Invalid" : currencyFormatter.format(selectedPanelEvaluation?.value ?? 0)}</strong>
               </div>
             </Tooltip>
 
-            <div className="bf-custom-formula-box__editor-actions">
-              <button type="button" className="bf-custom-formula-box__delete-button" onClick={deleteSelectedPanel}>
-                Delete
-              </button>
-            </div>
           </aside>
 
           <IconSelectorMenu

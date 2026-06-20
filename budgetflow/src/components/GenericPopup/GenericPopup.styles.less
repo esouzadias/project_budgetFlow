@@ -1,0 +1,177 @@
+@import "../../styles/Globals.less";
+
+.bf-generic-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bf-text) 22%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: bf-generic-popup-fade-in 160ms var(--bf-ease);
+}
+
+.bf-generic-popup__panel {
+  width: min(440px, 100%);
+  padding: 22px;
+  border: 1px solid var(--bf-border);
+  border-radius: var(--bf-radius-lg);
+  background: color-mix(in srgb, var(--bf-surface-bg) 98%, transparent);
+  box-shadow: var(--bf-shadow-3);
+  animation: bf-generic-popup-panel-in var(--bf-med) var(--bf-ease);
+}
+
+.bf-generic-popup__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.bf-generic-popup__heading {
+  min-width: 0;
+}
+
+.bf-generic-popup__heading h3 {
+  margin: 0;
+  color: var(--bf-text);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.bf-generic-popup__heading p {
+  margin: 8px 0 0;
+  color: var(--bf-muted);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.bf-generic-popup__body {
+  margin-top: 18px;
+  color: var(--bf-text);
+}
+
+.bf-generic-popup__close-button {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--bf-border);
+  border-radius: var(--bf-radius-pill);
+  background: var(--bf-surface-bg);
+  color: var(--bf-muted);
+  cursor: pointer;
+  transition:
+    transform var(--bf-fast) var(--bf-ease),
+    color var(--bf-fast) var(--bf-ease),
+    border-color var(--bf-fast) var(--bf-ease),
+    background-color var(--bf-fast) var(--bf-ease);
+}
+
+.bf-generic-popup__close-button:hover {
+  transform: translateY(-1px);
+  color: var(--bf-text);
+  border-color: color-mix(in srgb, var(--bf-primary) 24%, var(--bf-border));
+}
+
+.bf-generic-popup__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.bf-generic-popup__button {
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--bf-border);
+  border-radius: var(--bf-radius-pill);
+  background: var(--bf-surface-bg);
+  color: var(--bf-text);
+  cursor: pointer;
+  font-weight: 900;
+  transition:
+    transform var(--bf-fast) var(--bf-ease),
+    border-color var(--bf-fast) var(--bf-ease),
+    background-color var(--bf-fast) var(--bf-ease),
+    color var(--bf-fast) var(--bf-ease);
+}
+
+.bf-generic-popup__button:hover {
+  transform: translateY(-1px);
+}
+
+.bf-generic-popup__button--cancel:hover {
+  border-color: color-mix(in srgb, var(--bf-primary) 24%, var(--bf-border));
+}
+
+.bf-generic-popup__button--default {
+  border-color: color-mix(in srgb, var(--bf-primary) 36%, var(--bf-border));
+  background: color-mix(in srgb, var(--bf-primary) 8%, var(--bf-surface-bg));
+  color: var(--bf-primary);
+}
+
+.bf-generic-popup__button--default:hover {
+  border-color: color-mix(in srgb, var(--bf-primary) 62%, var(--bf-border));
+  background: color-mix(in srgb, var(--bf-primary) 12%, var(--bf-surface-bg));
+}
+
+.bf-generic-popup__button--danger {
+  border-color: color-mix(in srgb, var(--bf-danger) 42%, var(--bf-border));
+  background: color-mix(in srgb, var(--bf-danger) 10%, var(--bf-surface-bg));
+  color: var(--bf-danger);
+}
+
+.bf-generic-popup__button--danger:hover {
+  border-color: color-mix(in srgb, var(--bf-danger) 68%, var(--bf-border));
+  background: color-mix(in srgb, var(--bf-danger) 15%, var(--bf-surface-bg));
+}
+
+.bf-generic-popup__button--success {
+  border-color: color-mix(in srgb, var(--bf-success) 42%, var(--bf-border));
+  background: color-mix(in srgb, var(--bf-success) 10%, var(--bf-surface-bg));
+  color: var(--bf-success);
+}
+
+.bf-generic-popup__button--success:hover {
+  border-color: color-mix(in srgb, var(--bf-success) 68%, var(--bf-border));
+  background: color-mix(in srgb, var(--bf-success) 15%, var(--bf-surface-bg));
+}
+
+@keyframes bf-generic-popup-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bf-generic-popup-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 700px) {
+  .bf-generic-popup {
+    padding: 12px;
+    align-items: end;
+  }
+
+  .bf-generic-popup__panel {
+    width: 100%;
+  }
+}

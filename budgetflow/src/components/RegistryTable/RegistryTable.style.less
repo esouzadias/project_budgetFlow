@@ -38,6 +38,15 @@
     .MuiTableHead-root {
       .MuiTableCell-root {
         color: var(--bf-text) !important;
+        border-right: 1px solid color-mix(in srgb, var(--bf-border) 85%, transparent) !important;
+        height: 54px;
+        font-size: 14px;
+        font-weight: 800;
+        background: color-mix(in srgb, var(--bf-surface-bg) 96%, transparent);
+      }
+
+      .MuiTableCell-root:last-child {
+        border-right: 0 !important;
       }
     }
   }
@@ -47,10 +56,10 @@
       background-color var(--bf-fast) var(--bf-ease),
       transform 120ms var(--bf-ease);
 
-    &:hover {
+    /* &:hover {
       background: color-mix(in srgb, var(--bf-primary) 7%, transparent) !important;
       transform: translateY(-1px);
-    }
+    } */
   }
 
   .bf-registry-table__drag-handle {
@@ -79,6 +88,37 @@
   }
 
   .bf-registry-table__header-pills {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    gap: 10px;
+
+    .bf-pill {
+      height: 30px;
+      min-width: 48px;
+      padding: 0 12px;
+      border: 1px solid color-mix(in srgb, var(--bf-primary) 32%, var(--bf-border));
+      border-radius: var(--bf-radius-pill);
+      background: color-mix(in srgb, var(--bf-primary) 10%, var(--bf-surface-bg));
+      color: var(--bf-text);
+      box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
+    }
+
+    .bf-pill:hover {
+      background: color-mix(in srgb, var(--bf-primary) 15%, var(--bf-surface-bg));
+      border-color: color-mix(in srgb, var(--bf-primary) 50%, var(--bf-border));
+      transform: translateY(-1px);
+    }
+
+    .bf-pill__text {
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
+    }
+  }
+
+  .bf-registry-table__header-controls {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -157,16 +197,28 @@
       .MuiTableCell-root {
         border-bottom-color: rgba(226, 232, 240, 0.12) !important;
       }
+
+      .MuiTableHead-root {
+        .MuiTableCell-root {
+          border-right-color: rgba(226, 232, 240, 0.12) !important;
+          background: rgba(17, 24, 39, 0.76) !important;
+        }
+
+        .MuiTableCell-root:last-child {
+          border-right: 0 !important;
+        }
+      }
     }
 
-    .MuiStack-root, .bf-registry-table__actions-inner .MuiButtonBase-root {
+    .MuiStack-root,
+    .bf-registry-table__actions-inner .MuiButtonBase-root {
       color: var(--bf-text) !important;
     }
 
-    .MuiTableRow-root {
+    /* .MuiTableRow-root {
       &:hover {
         background: rgba(59, 130, 246, 0.12) !important;
       }
-    }
+    } */
   }
 }

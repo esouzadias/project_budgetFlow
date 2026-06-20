@@ -1,6 +1,9 @@
 // src/storage/budgetStorage.ts
 import type { RegistryRow } from "../components/RegistryTable/RegistryTable.types";
 import type { SavingItem } from "../pages/Savings/Savings.type";
+import LocalBudgetDB from "./LocalBudgetDB.json";
+
+const LOCAL_BUDGET_DB_KEY = "budgetflow:local-budget-db";
 
 export type PeriodKey = `${number}-${string}`; // "YYYY-MM"
 
@@ -29,6 +32,52 @@ export type BackupEntry = {
   year?: number;
 
   payload: PeriodData | Record<PeriodKey, PeriodData>;
+};
+
+export const loadLocalBudgetDB = () => {
+  const storedData = safeParse<any>(localStorage.getItem(LOCAL_BUDGET_DB_KEY), null);
+  const data: any = storedData ?? LocalBudgetDB;
+
+  const normalizeRow = (row: any): RegistryRow => ({
+    id: row.id ?? crypto.randomUUID(),
+    label: row.label ?? "",
+    amount: typeof row.amount === "number" ? row.amount : null,
+    prevAmount: typeof row.prevAmount === "number" ? row.prevAmount : null,
+    note: row.note ?? "",
+    iconId: row.iconId ?? "other",
+    iconImageUrl: row.iconImageUrl ?? null,
+    color: row.color ?? "#1a73e8",
+    categories: Array.isArray(row.categories) ? row.categories : [],
+    recurring: Boolean(row.recurring),
+  });
+
+  return {
+    version: data.version ?? 1,
+    updatedAt: data.updatedAt ?? new Date().toISOString(),
+    currency: data.currency ?? "EUR",
+    incomeRows: Array.isArray(data.incomeRows) ? data.incomeRows.map(normalizeRow) : [],
+    expenseRows: Array.isArray(data.expenseRows) ? data.expenseRows.map(normalizeRow) : [],
+    customFormulaPanels: Array.isArray(data.customFormulaPanels) ? data.customFormulaPanels : [],
+  };
+};
+
+export const saveLocalBudgetDB = (data: any) => {
+  const nextData = {
+    version: data.version ?? 1,
+    updatedAt: new Date().toISOString(),
+    currency: data.currency ?? "EUR",
+    incomeRows: Array.isArray(data.incomeRows) ? data.incomeRows : [],
+    expenseRows: Array.isArray(data.expenseRows) ? data.expenseRows : [],
+    customFormulaPanels: Array.isArray(data.customFormulaPanels) ? data.customFormulaPanels : [],
+  };
+
+  localStorage.setItem(LOCAL_BUDGET_DB_KEY, JSON.stringify(nextData));
+
+  return nextData;
+};
+
+export const clearLocalBudgetDB = () => {
+  localStorage.removeItem(LOCAL_BUDGET_DB_KEY);
 };
 
 const DATA_KEY = "bf:data:v1";

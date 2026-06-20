@@ -6,3 +6,146 @@
   background: var(--bf-bg);
   color: var(--bf-text);
 }
+
+.dashboard-page__save-indicator {
+  position: fixed;
+  top: 128px;
+  right: 28px;
+  z-index: 80;
+  min-width: 118px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid var(--bf-border);
+  border-radius: var(--bf-radius-pill);
+  background: color-mix(in srgb, var(--bf-surface-bg) 96%, transparent);
+  box-shadow: var(--bf-shadow-2);
+  color: var(--bf-text);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(var(--bf-surface-blur));
+  -webkit-backdrop-filter: blur(var(--bf-surface-blur));
+  pointer-events: none;
+  animation: dashboard-save-enter 180ms ease-out both;
+}
+
+.dashboard-page__save-icon-wrap {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.dashboard-page__save-icon-wrap svg {
+  width: 22px;
+  height: 22px;
+}
+
+.dashboard-page__save-label {
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dashboard-page__save-indicator--saving {
+  color: var(--bf-text);
+}
+
+.dashboard-page__save-indicator--saving .dashboard-page__save-icon-wrap {
+  color: var(--bf-accent);
+}
+
+.dashboard-page__save-indicator--saving .dashboard-page__save-icon-wrap::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 2px solid color-mix(in srgb, var(--bf-accent) 18%, transparent);
+  border-top-color: var(--bf-accent);
+  border-radius: 50%;
+  animation: dashboard-save-ring 850ms linear infinite;
+}
+
+.dashboard-page__save-indicator--saving .dashboard-page__save-icon-wrap svg {
+  animation: dashboard-save-icon-spin 850ms linear infinite;
+}
+
+.dashboard-page__save-indicator--saved {
+  color: var(--bf-success);
+}
+
+.dashboard-page__save-indicator--saved .dashboard-page__save-icon-wrap svg {
+  animation: dashboard-save-pop 260ms ease-out both;
+}
+
+.dashboard-page__save-indicator--error {
+  color: var(--bf-danger);
+}
+
+.dashboard-page__save-indicator--error .dashboard-page__save-icon-wrap svg {
+  animation: dashboard-save-shake 360ms ease-in-out both;
+}
+
+@keyframes dashboard-save-enter {
+  from {
+    opacity: 0;
+    transform: translateX(12px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes dashboard-save-ring {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dashboard-save-icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dashboard-save-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+
+  70% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes dashboard-save-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-2px);
+  }
+
+  50% {
+    transform: translateX(2px);
+  }
+
+  75% {
+    transform: translateX(-1px);
+  }
+}

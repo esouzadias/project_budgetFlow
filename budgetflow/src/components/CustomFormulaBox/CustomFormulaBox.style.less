@@ -38,7 +38,6 @@
 }
 
 .bf-custom-formula-box__add-button,
-.bf-custom-formula-box__delete-button,
 .bf-custom-formula-box__icon-button {
   border: 1px solid var(--bf-border);
   border-radius: var(--bf-radius-pill);
@@ -68,11 +67,43 @@
   place-items: center;
 }
 
-.bf-custom-formula-box__delete-button {
-  height: 42px;
-  padding: 0 16px;
-  font-weight: 800;
+
+.bf-custom-formula-box__card-delete-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 6;
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--bf-danger) 38%, var(--bf-border));
+  border-radius: var(--bf-radius-pill);
   color: var(--bf-danger);
+  background: color-mix(in srgb, var(--bf-danger) 8%, var(--bf-surface-bg));
+  box-shadow: var(--bf-shadow-1);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-3px) scale(0.96);
+  pointer-events: none;
+  transition:
+    opacity var(--bf-fast) var(--bf-ease),
+    transform var(--bf-fast) var(--bf-ease),
+    background-color var(--bf-fast) var(--bf-ease),
+    border-color var(--bf-fast) var(--bf-ease);
+}
+
+.bf-custom-formula-box__card:hover .bf-custom-formula-box__card-delete-button,
+.bf-custom-formula-box__card:focus-visible .bf-custom-formula-box__card-delete-button,
+.bf-custom-formula-box__card-delete-button:focus-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.bf-custom-formula-box__card-delete-button:hover {
+  border-color: color-mix(in srgb, var(--bf-danger) 68%, var(--bf-border));
+  background: color-mix(in srgb, var(--bf-danger) 14%, var(--bf-surface-bg));
 }
 
 .bf-custom-formula-box__cards {
@@ -413,11 +444,34 @@
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 8px;
-  border: 1px dashed color-mix(in srgb, var(--bf-primary) 42%, var(--bf-border));
+  gap: 10px;
+  border: 1px dashed color-mix(in srgb, var(--bf-primary) 52%, var(--bf-border));
   color: var(--bf-primary);
-  background: color-mix(in srgb, var(--bf-primary) 4%, transparent);
-  font-weight: 800;
+  background: color-mix(in srgb, var(--bf-primary) 5%, transparent);
+  font-weight: 900;
+  box-shadow: none;
+  transition:
+    transform var(--bf-fast) var(--bf-ease),
+    border-color var(--bf-fast) var(--bf-ease),
+    background-color var(--bf-fast) var(--bf-ease),
+    box-shadow var(--bf-fast) var(--bf-ease);
+}
+
+.bf-custom-formula-box__empty-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--bf-primary) 72%, var(--bf-border));
+  background: color-mix(in srgb, var(--bf-primary) 8%, transparent);
+  box-shadow: var(--bf-shadow-1);
+}
+
+.bf-custom-formula-box__empty-card-icon {
+  width: 42px;
+  height: 42px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--bf-radius-pill);
+  color: var(--bf-primary);
+  background: color-mix(in srgb, var(--bf-primary) 12%, transparent);
 }
 
 .bf-custom-formula-box__overlay {
@@ -547,6 +601,12 @@
   .bf-custom-formula-box__card {
     grid-template-columns: 44px minmax(0, 1fr);
     padding-right: 76px;
+  }
+
+  .bf-custom-formula-box__card-delete-button {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
   }
 
   .bf-custom-formula-box__mobile-order-controls {
