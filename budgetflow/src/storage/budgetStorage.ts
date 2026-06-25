@@ -1,5 +1,6 @@
 // src/storage/budgetStorage.ts
 import type { RegistryRow } from "../components/RegistryTable/RegistryTable.types";
+import type { BudgetTable, CustomFormulaPanel, DashboardStore, MonthKey, MonthSnapshot } from "../pages/DashboardPage/DashboardPage.types";
 import type { SavingItem } from "../pages/Savings/Savings.type";
 import LocalBudgetDB from "./LocalBudgetDB.json";
 
@@ -34,52 +35,6 @@ export type BackupEntry = {
   payload: PeriodData | Record<PeriodKey, PeriodData>;
 };
 
-export const loadLocalBudgetDB = () => {
-  const storedData = safeParse<any>(localStorage.getItem(LOCAL_BUDGET_DB_KEY), null);
-  const data: any = storedData ?? LocalBudgetDB;
-
-  const normalizeRow = (row: any): RegistryRow => ({
-    id: row.id ?? crypto.randomUUID(),
-    label: row.label ?? "",
-    amount: typeof row.amount === "number" ? row.amount : null,
-    prevAmount: typeof row.prevAmount === "number" ? row.prevAmount : null,
-    note: row.note ?? "",
-    iconId: row.iconId ?? "other",
-    iconImageUrl: row.iconImageUrl ?? null,
-    color: row.color ?? "#1a73e8",
-    categories: Array.isArray(row.categories) ? row.categories : [],
-    recurring: Boolean(row.recurring),
-  });
-
-  return {
-    version: data.version ?? 1,
-    updatedAt: data.updatedAt ?? new Date().toISOString(),
-    currency: data.currency ?? "EUR",
-    incomeRows: Array.isArray(data.incomeRows) ? data.incomeRows.map(normalizeRow) : [],
-    expenseRows: Array.isArray(data.expenseRows) ? data.expenseRows.map(normalizeRow) : [],
-    customFormulaPanels: Array.isArray(data.customFormulaPanels) ? data.customFormulaPanels : [],
-  };
-};
-
-export const saveLocalBudgetDB = (data: any) => {
-  const nextData = {
-    version: data.version ?? 1,
-    updatedAt: new Date().toISOString(),
-    currency: data.currency ?? "EUR",
-    incomeRows: Array.isArray(data.incomeRows) ? data.incomeRows : [],
-    expenseRows: Array.isArray(data.expenseRows) ? data.expenseRows : [],
-    customFormulaPanels: Array.isArray(data.customFormulaPanels) ? data.customFormulaPanels : [],
-  };
-
-  localStorage.setItem(LOCAL_BUDGET_DB_KEY, JSON.stringify(nextData));
-
-  return nextData;
-};
-
-export const clearLocalBudgetDB = () => {
-  localStorage.removeItem(LOCAL_BUDGET_DB_KEY);
-};
-
 const DATA_KEY = "bf:data:v1";
 const BACKUP_KEY = "bf:backups:v1";
 
@@ -95,6 +50,127 @@ const safeParse = <T>(raw: string | null, fallback: T): T => {
   } catch {
     return fallback;
   }
+};
+
+const createMonthKey = (date = new Date()): MonthKey => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}` as MonthKey;
+};
+
+const normalizeRow = (row: any): RegistryRow => ({
+  id: row.id ?? crypto.randomUUID(),
+  label: row.label ?? "",
+  amount: typeof row.amount === "number" ? row.amount : null,
+  prevAmount: typeof row.prevAmount === "number" ? row.prevAmount : null,
+  note: row.note ?? "",
+  iconId: row.iconId ?? "other",
+  iconImageUrl: row.iconImageUrl ?? null,
+  color: row.color ?? "#1a73e8",
+  categories: Array.isArray(row.categories) ? row.categories : [],
+  recurring: Boolean(row.recurring),
+});
+
+const normalizeTable = (table: any, fallbackIndex: number): BudgetTable => ({
+  id: table.id ?? `table-${fallbackIndex}-${crypto.randomUUID()}`,
+  name: table.name ?? "Custom Table",
+  type: table.type ?? "custom",
+  visible: table.visible !== false,
+  rows: Array.isArray(table.rows) ? table.rows.map(normalizeRow) : [],
+});
+
+const normalizeFormulaPanel = (panel: any): CustomFormulaPanel => ({
+  id: panel.id ?? crypto.randomUUID(),
+  title: panel.title ?? "Formula",
+  expression: panel.expression ?? "0",
+  accent: panel.accent ?? "blue",
+  iconId: panel.iconId ?? "other",
+  iconImageUrl: panel.iconImageUrl ?? null,
+  color: panel.color ?? "#1a73e8",
+});
+
+const createDefaultPeriodFromLegacyData = (data: any): MonthSnapshot => ({
+  tables: [
+    {
+      id: "table-income",
+      name: "Income",
+      type: "income",
+      visible: true,
+      rows: Array.isArray(data.incomeRows) ? data.incomeRows.map(normalizeRow) : [],
+    },
+    {
+      id: "table-expenses",
+      name: "Expenses",
+      type: "expense",
+      visible: true,
+      rows: Array.isArray(data.expenseRows) ? data.expenseRows.map(normalizeRow) : [],
+    },
+  ],
+  customFormulaPanels: Array.isArray(data.customFormulaPanels) ? data.customFormulaPanels.map(normalizeFormulaPanel) : [],
+  charts: [],
+});
+
+const normalizePeriod = (period: any, fallbackData: any): MonthSnapshot => {
+  if (!period) return createDefaultPeriodFromLegacyData(fallbackData);
+
+  const fallbackPeriod = createDefaultPeriodFromLegacyData(fallbackData);
+
+  return {
+    tables: Array.isArray(period.tables)
+      ? period.tables.map((table: any, index: number) => normalizeTable(table, index))
+      : fallbackPeriod.tables,
+    customFormulaPanels: Array.isArray(period.customFormulaPanels)
+      ? period.customFormulaPanels.map(normalizeFormulaPanel)
+      : fallbackPeriod.customFormulaPanels,
+    charts: Array.isArray(period.charts) ? period.charts : [],
+  };
+};
+
+const normalizeDashboardStore = (data: any): DashboardStore => {
+  const fallbackPeriodKey = (data.activePeriodKey ?? createMonthKey()) as MonthKey;
+  const fallbackPeriod = createDefaultPeriodFromLegacyData(data);
+  const rawPeriods = data.periods && typeof data.periods === "object" ? data.periods : { [fallbackPeriodKey]: fallbackPeriod };
+
+  const periods = Object.entries(rawPeriods).reduce((acc, [key, period]) => {
+    acc[key as MonthKey] = normalizePeriod(period, data);
+    return acc;
+  }, {} as Record<MonthKey, MonthSnapshot>);
+
+  if (!periods[fallbackPeriodKey]) {
+    periods[fallbackPeriodKey] = fallbackPeriod;
+  }
+
+  return {
+    version: data.version ?? 2,
+    updatedAt: data.updatedAt ?? new Date().toISOString(),
+    currency: data.currency ?? "EUR",
+    activePeriodKey: fallbackPeriodKey,
+    periods,
+  };
+};
+
+export const loadLocalBudgetDB = (): DashboardStore => {
+  const storedData = safeParse<any>(localStorage.getItem(LOCAL_BUDGET_DB_KEY), null);
+  const data: any = storedData ?? LocalBudgetDB;
+
+  return normalizeDashboardStore(data);
+};
+
+export const saveLocalBudgetDB = (data: Partial<DashboardStore>) => {
+  const normalizedData = normalizeDashboardStore(data);
+  const nextData: DashboardStore = {
+    ...normalizedData,
+    version: normalizedData.version ?? 2,
+    updatedAt: new Date().toISOString(),
+  };
+
+  localStorage.setItem(LOCAL_BUDGET_DB_KEY, JSON.stringify(nextData));
+
+  return nextData;
+};
+
+export const clearLocalBudgetDB = () => {
+  localStorage.removeItem(LOCAL_BUDGET_DB_KEY);
 };
 
 const readDataMap = (): Record<PeriodKey, PeriodData> =>

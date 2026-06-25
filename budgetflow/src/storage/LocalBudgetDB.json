@@ -1,86 +1,106 @@
 {
-  "version": 1,
+  "version": 2,
   "updatedAt": "2026-06-11",
   "currency": "EUR",
-  "incomeRows": [
-    {
-      "id": "income-salary",
-      "label": "Salary",
-      "amount": 1200,
-      "prevAmount": 1100,
-      "note": "Main monthly income",
-      "iconId": "paid",
-      "iconImageUrl": null,
-      "color": "#34a853",
-      "categories": ["Salary"],
-      "recurring": true
-    },
-    {
-      "id": "income-freelance",
-      "label": "Freelance",
-      "amount": 250,
-      "prevAmount": 0,
-      "note": "",
-      "iconId": "other",
-      "iconImageUrl": null,
-      "color": "#1a73e8",
-      "categories": ["Misc"],
-      "recurring": false
+  "activePeriodKey": "2026-06",
+  "periods": {
+    "2026-06": {
+      "tables": [
+        {
+          "id": "table-income",
+          "name": "Income",
+          "type": "income",
+          "visible": true,
+          "rows": [
+            {
+              "id": "income-salary",
+              "label": "Salary",
+              "amount": 1200,
+              "prevAmount": 1100,
+              "note": "Main monthly income",
+              "iconId": "paid",
+              "iconImageUrl": null,
+              "color": "#34a853",
+              "categories": ["Salary"],
+              "recurring": true
+            },
+            {
+              "id": "income-freelance",
+              "label": "Freelance",
+              "amount": 250,
+              "prevAmount": 0,
+              "note": "",
+              "iconId": "other",
+              "iconImageUrl": null,
+              "color": "#1a73e8",
+              "categories": ["Misc"],
+              "recurring": false
+            }
+          ]
+        },
+        {
+          "id": "table-expenses",
+          "name": "Expenses",
+          "type": "expense",
+          "visible": true,
+          "rows": [
+            {
+              "id": "expense-rent",
+              "label": "Rent",
+              "amount": 600,
+              "prevAmount": 600,
+              "note": "Fixed house cost",
+              "iconId": "home",
+              "iconImageUrl": null,
+              "color": "#ea4335",
+              "categories": ["House"],
+              "recurring": true
+            },
+            {
+              "id": "expense-food",
+              "label": "Food",
+              "amount": 220,
+              "prevAmount": 180,
+              "note": "",
+              "iconId": "receipt",
+              "iconImageUrl": null,
+              "color": "#fbbc04",
+              "categories": ["Food"],
+              "recurring": false
+            }
+          ]
+        }
+      ],
+      "customFormulaPanels": [
+        {
+          "id": "formula-total-income",
+          "title": "Total Income",
+          "expression": "total_income",
+          "accent": "green",
+          "iconId": "paid",
+          "iconImageUrl": null,
+          "color": "#34a853"
+        },
+        {
+          "id": "formula-total-expenses",
+          "title": "Total Expenses",
+          "expression": "total_expenses",
+          "accent": "red",
+          "iconId": "receipt",
+          "iconImageUrl": null,
+          "color": "#ea4335"
+        },
+        {
+          "id": "formula-balance",
+          "title": "Balance",
+          "expression": "total_income - total_expenses",
+          "accent": "blue",
+          "iconId": "bank",
+          "iconImageUrl": null,
+          "color": "#1a73e8"
+        }
+      ],
+      "charts": []
     }
-  ],
-  "expenseRows": [
-    {
-      "id": "expense-rent",
-      "label": "Rent",
-      "amount": 600,
-      "prevAmount": 600,
-      "note": "Fixed house cost",
-      "iconId": "home",
-      "iconImageUrl": null,
-      "color": "#ea4335",
-      "categories": ["House"],
-      "recurring": true
-    },
-    {
-      "id": "expense-food",
-      "label": "Food",
-      "amount": 220,
-      "prevAmount": 180,
-      "note": "",
-      "iconId": "receipt",
-      "iconImageUrl": null,
-      "color": "#fbbc04",
-      "categories": ["Food"],
-      "recurring": false
-    }
-  ],
-  "customFormulaPanels": [
-    {
-      "id": "formula-total-income",
-      "title": "Total Income",
-      "expression": "total_income",
-      "accent": "green",
-      "iconId": "paid",
-      "iconImageUrl": null,
-      "color": "#34a853"
-    },
-    {
-      "id": "formula-total-expenses",
-      "title": "Total Expenses",
-      "expression": "total_expenses",
-      "accent": "red",
-      "iconId": "receipt",
-      "iconImageUrl": null,
-      "color": "#ea4335"
-    },
-    {
-      "id": "formula-balance",
-      "title": "Balance",
-      "expression": "total_income - total_expenses",
-      "accent": "blue",
-      "iconId": "bank",
-      "iconImageUrl": null,
-      "color": "#1a73e8"
-    }
-  ]
+  }
 }

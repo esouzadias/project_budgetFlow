@@ -49,11 +49,87 @@ const sizeToSpan: Record<DashboardBlockSize, number> = {
   third: 2,
 };
 
+const getSizeForRowItemCount = (rowItemCount: number): DashboardBlockSize => {
+  if (rowItemCount <= 1) return "full";
+  if (rowItemCount === 2) return "half";
+
+  return "third";
+};
+
+const getLayoutRows = (blocks: DashboardLayoutBlock[]) => {
+  const rows: DashboardLayoutBlock[][] = [];
+  let currentRow: DashboardLayoutBlock[] = [];
+  let currentSpan = 0;
+
+  for (const block of blocks) {
+    const blockSpan = sizeToSpan[block.size];
+
+    if (currentRow.length > 0 && currentSpan + blockSpan > 6) {
+      rows.push(currentRow);
+      currentRow = [];
+      currentSpan = 0;
+    }
+
+    currentRow.push(block);
+    currentSpan += blockSpan;
+  }
+
+  if (currentRow.length > 0) {
+    rows.push(currentRow);
+  }
+
+  return rows;
+};
+
+const normalizeRows = (rows: DashboardLayoutBlock[][]): DashboardLayoutBlock[] => {
+  return rows.flatMap((row) => {
+    const rowSize = getSizeForRowItemCount(row.length);
+
+    return row.map((block) => ({
+      ...block,
+      size: rowSize,
+    }));
+  });
+};
+
+const normalizeLayoutSizes = (blocks: DashboardLayoutBlock[]): DashboardLayoutBlock[] => {
+  return normalizeRows(getLayoutRows(blocks));
+};
+
+const appendNewBlocksToLastAvailableRow = (existingBlocks: DashboardLayoutBlock[], newBlocks: DashboardLayoutBlock[]) => {
+  if (newBlocks.length === 0) return normalizeLayoutSizes(existingBlocks);
+  if (existingBlocks.length === 0) return normalizeLayoutSizes(newBlocks);
+
+  const rows = getLayoutRows(existingBlocks);
+  const lastRow = rows[rows.length - 1] ?? [];
+  const previousRows = rows.slice(0, -1);
+  const nextRows = [...previousRows];
+
+  let currentRow = [...lastRow];
+
+  for (const newBlock of newBlocks) {
+    if (currentRow.length >= 3) {
+      nextRows.push(currentRow);
+      currentRow = [];
+    }
+
+    currentRow.push(newBlock);
+  }
+
+  if (currentRow.length > 0) {
+    nextRows.push(currentRow);
+  }
+
+  return normalizeRows(nextRows);
+};
+
 const getInitialLayout = (blocks: DashboardGridBlock[]): DashboardLayoutBlock[] => {
-  return blocks.map((block) => ({
-    id: block.id,
-    size: block.defaultSize ?? "half",
-  }));
+  return normalizeLayoutSizes(
+    blocks.map((block) => ({
+      id: block.id,
+      size: block.defaultSize ?? "half",
+    })),
+  );
 };
 
 const reorderBlocks = (blocks: DashboardLayoutBlock[], sourceId: string, targetId: string, insertAfter: boolean) => {
@@ -99,11 +175,15 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
       const nextIds = new Set(blocks.map((block) => block.id));
       const existingLayout = currentLayout.filter((block) => nextIds.has(block.id));
       const existingIds = new Set(existingLayout.map((block) => block.id));
+
       const newLayout = blocks
         .filter((block) => !existingIds.has(block.id))
-        .map((block) => ({ id: block.id, size: block.defaultSize ?? "half" }));
+        .map((block) => ({
+          id: block.id,
+          size: block.defaultSize ?? "full",
+        }));
 
-      return [...existingLayout, ...newLayout];
+      return appendNewBlocksToLastAvailableRow(existingLayout, newLayout);
     });
   }, [blocks]);
 
@@ -121,9 +201,10 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
 
       const nextLayout = [...currentLayout];
       const [movedBlock] = nextLayout.splice(currentIndex, 1);
+
       nextLayout.splice(targetIndex, 0, movedBlock);
 
-      return nextLayout;
+      return normalizeLayoutSizes(nextLayout);
     });
   };
 
@@ -233,6 +314,7 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
 
     const targetElement = intent === "before" ? row.elements[0] : row.elements[row.elements.length - 1];
     const targetId = getBlockIdFromElement(targetElement);
+
     if (!targetId) return null;
 
     const gridRect = gridElement.getBoundingClientRect();
@@ -258,6 +340,7 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
 
     const targetElement = getClosestElementInRow(row, clientX);
     const targetId = getBlockIdFromElement(targetElement);
+
     if (!targetElement || !targetId) return null;
 
     const gridRect = gridElement.getBoundingClientRect();
@@ -355,8 +438,9 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
       const insertAfter = dropPreview.intent === "after" || dropPreview.intent === "side-after";
       const nextLayout = reorderBlocks(currentLayout, draggingBlockId, dropPreview.targetId, insertAfter);
       const resizeIds = new Set(dropPreview.resizeIds);
+      const resizedLayout = nextLayout.map((block) => (resizeIds.has(block.id) ? { ...block, size: dropPreview.size } : block));
 
-      return nextLayout.map((block) => (resizeIds.has(block.id) ? { ...block, size: dropPreview.size } : block));
+      return normalizeLayoutSizes(resizedLayout);
     });
 
     setDraggingBlockId(null);

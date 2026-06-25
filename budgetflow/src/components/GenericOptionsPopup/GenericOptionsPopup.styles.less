@@ -1,0 +1,96 @@
+@import "../../styles/Globals.less";
+
+.bf-generic-options-popup-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: transparent;
+}
+
+.bf-generic-options-popup {
+  position: fixed;
+  padding: 10px;
+  border: 1px solid var(--bf-border);
+  border-radius: var(--bf-radius-lg);
+  background: color-mix(in srgb, var(--bf-surface-bg) 98%, transparent);
+  box-shadow: var(--bf-shadow-3);
+  backdrop-filter: blur(var(--bf-surface-blur));
+  -webkit-backdrop-filter: blur(var(--bf-surface-blur));
+  animation: bf-generic-options-popup-in 140ms var(--bf-ease);
+}
+
+.bf-generic-options-popup__title {
+  margin: 2px 4px 8px;
+  color: var(--bf-text);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.bf-generic-options-popup__options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bf-generic-options-popup__option {
+  width: 100%;
+  min-height: 54px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--bf-radius-md);
+  color: var(--bf-text);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--bf-fast) var(--bf-ease),
+    color var(--bf-fast) var(--bf-ease),
+    transform var(--bf-fast) var(--bf-ease);
+}
+
+.bf-generic-options-popup__option:hover:not(:disabled),
+.bf-generic-options-popup__option:focus-visible:not(:disabled) {
+  background: color-mix(in srgb, var(--bf-primary) 9%, transparent);
+  color: var(--bf-primary);
+  outline: none;
+}
+
+.bf-generic-options-popup__option:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.bf-generic-options-popup__option:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.bf-generic-options-popup__option-label {
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.bf-generic-options-popup__option-description {
+  color: var(--bf-muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+@keyframes bf-generic-options-popup-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
