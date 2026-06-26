@@ -1,12 +1,17 @@
-// src/storage/budgetStorage.ts
 import type { RegistryRow } from "../components/RegistryTable/RegistryTable.types";
-import type { BudgetTable, CustomFormulaPanel, DashboardStore, MonthKey, MonthSnapshot } from "../pages/DashboardPage/DashboardPage.types";
+import type {
+  BudgetTable,
+  CustomFormulaPanel,
+  DashboardStore,
+  MonthKey,
+  MonthSnapshot,
+} from "../pages/DashboardPage/DashboardPage.types";
 import type { SavingItem } from "../pages/Savings/Savings.type";
 import LocalBudgetDB from "./LocalBudgetDB.json";
 
 const LOCAL_BUDGET_DB_KEY = "budgetflow:local-budget-db";
 
-export type PeriodKey = `${number}-${string}`; // "YYYY-MM"
+export type PeriodKey = `${number}-${string}`;
 
 export type PeriodData = {
   periodKey: PeriodKey;
@@ -43,8 +48,9 @@ const BACKUP_RETENTION_DAYS = 30;
 
 const now = () => Date.now();
 
-const safeParse = <T>(raw: string | null, fallback: T): T => {
+const safeParse = <T,>(raw: string | null, fallback: T): T => {
   if (!raw) return fallback;
+
   try {
     return JSON.parse(raw) as T;
   } catch {
@@ -55,7 +61,46 @@ const safeParse = <T>(raw: string | null, fallback: T): T => {
 const createMonthKey = (date = new Date()): MonthKey => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
+
   return `${year}-${month}` as MonthKey;
+};
+
+const createDefaultFormulaPanels = (): CustomFormulaPanel[] => [
+  {
+    id: crypto.randomUUID(),
+    title: "Total Income",
+    expression: "total_income",
+    accent: "green",
+    iconId: "paid",
+    iconImageUrl: null,
+    color: "#34a853",
+  },
+  {
+    id: crypto.randomUUID(),
+    title: "Total Expenses",
+    expression: "total_expenses",
+    accent: "red",
+    iconId: "receipt",
+    iconImageUrl: null,
+    color: "#ea4335",
+  },
+  {
+    id: crypto.randomUUID(),
+    title: "Balance",
+    expression: "total_income - total_expenses",
+    accent: "blue",
+    iconId: "bank",
+    iconImageUrl: null,
+    color: "#1a73e8",
+  },
+];
+
+const normalizeFormulaAccent = (accent: any): CustomFormulaPanel["accent"] => {
+  if (accent === "green" || accent === "red" || accent === "blue" || accent === "purple" || accent === "orange") {
+    return accent;
+  }
+
+  return "blue";
 };
 
 const normalizeRow = (row: any): RegistryRow => ({
@@ -83,7 +128,7 @@ const normalizeFormulaPanel = (panel: any): CustomFormulaPanel => ({
   id: panel.id ?? crypto.randomUUID(),
   title: panel.title ?? "Formula",
   expression: panel.expression ?? "0",
-  accent: panel.accent ?? "blue",
+  accent: normalizeFormulaAccent(panel.accent),
   iconId: panel.iconId ?? "other",
   iconImageUrl: panel.iconImageUrl ?? null,
   color: panel.color ?? "#1a73e8",
@@ -106,7 +151,10 @@ const createDefaultPeriodFromLegacyData = (data: any): MonthSnapshot => ({
       rows: Array.isArray(data.expenseRows) ? data.expenseRows.map(normalizeRow) : [],
     },
   ],
-  customFormulaPanels: Array.isArray(data.customFormulaPanels) ? data.customFormulaPanels.map(normalizeFormulaPanel) : [],
+  customFormulaPanels:
+    Array.isArray(data.customFormulaPanels) && data.customFormulaPanels.length > 0
+      ? data.customFormulaPanels.map(normalizeFormulaPanel)
+      : createDefaultFormulaPanels(),
   charts: [],
 });
 
@@ -119,9 +167,10 @@ const normalizePeriod = (period: any, fallbackData: any): MonthSnapshot => {
     tables: Array.isArray(period.tables)
       ? period.tables.map((table: any, index: number) => normalizeTable(table, index))
       : fallbackPeriod.tables,
-    customFormulaPanels: Array.isArray(period.customFormulaPanels)
-      ? period.customFormulaPanels.map(normalizeFormulaPanel)
-      : fallbackPeriod.customFormulaPanels,
+    customFormulaPanels:
+      Array.isArray(period.customFormulaPanels) && period.customFormulaPanels.length > 0
+        ? period.customFormulaPanels.map(normalizeFormulaPanel)
+        : fallbackPeriod.customFormulaPanels,
     charts: Array.isArray(period.charts) ? period.charts : [],
   };
 };
@@ -188,21 +237,25 @@ const writeBackups = (items: BackupEntry[]) =>
 export const getCurrentPeriodKey = (d = new Date()): PeriodKey => {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
+
   return `${year}-${month}` as PeriodKey;
 };
 
 export const listPeriodKeys = (): PeriodKey[] => {
   const map = readDataMap();
+
   return (Object.keys(map) as PeriodKey[]).sort();
 };
 
 export const getPeriod = (periodKey: PeriodKey): PeriodData | null => {
   const map = readDataMap();
+
   return map[periodKey] ?? null;
 };
 
 export const upsertPeriod = (period: PeriodData) => {
   const map = readDataMap();
+
   map[period.periodKey] = period;
   writeDataMap(map);
 };
@@ -226,18 +279,22 @@ export const ensurePeriod = (periodKey: PeriodKey): PeriodData => {
   };
 
   upsertPeriod(base);
+
   return base;
 };
 
 export const ensureCurrentYearRecord = (): PeriodKey => {
   const key = getCurrentPeriodKey();
+
   ensurePeriod(key);
+
   return key;
 };
 
 export const deleteMonthToBackup = (periodKey: PeriodKey, reason: string) => {
   const map = readDataMap();
   const data = map[periodKey];
+
   if (!data) return;
 
   const deletedAt = now();
@@ -254,6 +311,7 @@ export const deleteMonthToBackup = (periodKey: PeriodKey, reason: string) => {
   };
 
   const backups = readBackups();
+
   writeBackups([entry, ...backups]);
 
   delete map[periodKey];
@@ -264,11 +322,15 @@ export const deleteYearToBackup = (year: number, reason: string) => {
   const map = readDataMap();
   const prefix = `${year}-`;
 
-  const keys = (Object.keys(map) as PeriodKey[]).filter((k) => k.startsWith(prefix));
+  const keys = (Object.keys(map) as PeriodKey[]).filter((key) => key.startsWith(prefix));
+
   if (!keys.length) return;
 
   const payload: Record<PeriodKey, PeriodData> = {};
-  for (const k of keys) payload[k] = map[k];
+
+  for (const key of keys) {
+    payload[key] = map[key];
+  }
 
   const deletedAt = now();
   const expiresAt = deletedAt + BACKUP_RETENTION_DAYS * MS_DAY;
@@ -284,17 +346,24 @@ export const deleteYearToBackup = (year: number, reason: string) => {
   };
 
   const backups = readBackups();
+
   writeBackups([entry, ...backups]);
 
-  for (const k of keys) delete map[k];
+  for (const key of keys) {
+    delete map[key];
+  }
+
   writeDataMap(map);
 };
 
 export const purgeExpiredBackups = () => {
   const backups = readBackups();
-  const t = now();
-  const next = backups.filter((b) => b.expiresAt > t);
-  if (next.length !== backups.length) writeBackups(next);
+  const timestamp = now();
+  const nextBackups = backups.filter((backup) => backup.expiresAt > timestamp);
+
+  if (nextBackups.length !== backups.length) {
+    writeBackups(nextBackups);
+  }
 };
 
 export const exportAllToJsonFile = () => {
@@ -311,10 +380,11 @@ export const exportAllToJsonFile = () => {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `budgetflow-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `budgetflow-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
 
   URL.revokeObjectURL(url);
 };

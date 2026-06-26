@@ -1,0 +1,108 @@
+@import "../../styles/Globals.less";
+
+.bf-period-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid color-mix(in srgb, var(--bf-border) 82%, transparent);
+  border-radius: var(--bf-radius-pill);
+  background: color-mix(in srgb, var(--bf-surface-bg) 92%, transparent);
+  box-shadow: var(--bf-shadow-1);
+  backdrop-filter: blur(var(--bf-surface-blur));
+  -webkit-backdrop-filter: blur(var(--bf-surface-blur));
+
+  &__nav-button,
+  &__current-button {
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: var(--bf-radius-pill);
+    color: var(--bf-text);
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+    transition:
+      transform var(--bf-fast) var(--bf-ease),
+      color var(--bf-fast) var(--bf-ease),
+      background-color var(--bf-fast) var(--bf-ease),
+      border-color var(--bf-fast) var(--bf-ease);
+
+    &:hover {
+      transform: translateY(-1px);
+      color: var(--bf-primary);
+      border-color: color-mix(in srgb, var(--bf-primary) 34%, var(--bf-border));
+      background: color-mix(in srgb, var(--bf-primary) 9%, transparent);
+    }
+
+    &:active {
+      transform: scale(0.96);
+    }
+  }
+
+  &__nav-button {
+    width: 34px;
+    flex: 0 0 auto;
+  }
+
+  &__current-button {
+    gap: 7px;
+    padding: 0 12px;
+    color: var(--bf-primary);
+    font-size: 12px;
+    font-weight: 900;
+    background: color-mix(in srgb, var(--bf-primary) 7%, transparent);
+  }
+
+  &__period {
+    min-width: 174px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 12px;
+    text-align: center;
+  }
+
+  &__eyebrow {
+    color: var(--bf-muted);
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  &__label {
+    color: var(--bf-text);
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1.25;
+    text-transform: capitalize;
+  }
+
+  svg {
+    color: currentColor;
+  }
+}
+
+@media (max-width: 700px) {
+  .bf-period-selector {
+    width: 100%;
+    justify-content: space-between;
+    border-radius: var(--bf-radius-lg);
+
+    &__period {
+      min-width: 0;
+      flex: 1;
+    }
+
+    &__current-button {
+      span {
+        display: none;
+      }
+    }
+  }
+}

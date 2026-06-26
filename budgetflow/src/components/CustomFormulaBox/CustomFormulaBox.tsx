@@ -24,9 +24,9 @@ import { COLOR_PRESETS, ICON_OPTIONS } from "../IconSelectorMenu/IconSelectorMen
 
 import type { IconId } from "../IconSelectorMenu/IconSelectorMenu.types";
 import type { RegistryRow } from "../RegistryTable/RegistryTable.types";
+import type { CustomFormulaPanel } from "../../pages/DashboardPage/DashboardPage.types";
 
 type FormulaVariableSource = "income" | "expense" | "saving" | "formula" | "system";
-type FormulaAccent = "green" | "red" | "blue" | "purple" | "orange";
 
 type FormulaEvaluation = {
   value: number | null;
@@ -40,16 +40,6 @@ type FormulaVariable = {
   source: FormulaVariableSource;
 };
 
-type FormulaPanel = {
-  id: string;
-  title: string;
-  expression: string;
-  accent: FormulaAccent;
-  iconId: IconId;
-  iconImageUrl?: string | null;
-  color: string;
-};
-
 type EditableFormulaToken = {
   id: string;
   value: string;
@@ -60,11 +50,11 @@ type CustomFormulaBoxProps = {
   incomeRows?: RegistryRow[];
   expenseRows?: RegistryRow[];
   savingRows?: RegistryRow[];
-  customFormulaPanels?: FormulaPanel[];
-  onChangeCustomFormulaPanels?: (panels: FormulaPanel[]) => void;
+  customFormulaPanels?: CustomFormulaPanel[];
+  onChangeCustomFormulaPanels?: (panels: CustomFormulaPanel[]) => void;
 };
 
-const defaultPanels: FormulaPanel[] = [
+const defaultPanels: CustomFormulaPanel[] = [
   {
     id: "total-income",
     title: "Total Income",
@@ -264,11 +254,11 @@ const CustomFormulaBox = ({
   customFormulaPanels,
   onChangeCustomFormulaPanels,
 }: CustomFormulaBoxProps) => {
-  const [internalPanels, setInternalPanels] = useState<FormulaPanel[]>(defaultPanels);
+  const [internalPanels, setInternalPanels] = useState<CustomFormulaPanel[]>(defaultPanels);
   const isControlled = customFormulaPanels !== undefined;
   const panels = isControlled ? customFormulaPanels : internalPanels;
 
-  const setPanels = (value: FormulaPanel[] | ((currentPanels: FormulaPanel[]) => FormulaPanel[])) => {
+  const setPanels = (value: CustomFormulaPanel[] | ((currentPanels: CustomFormulaPanel[]) => CustomFormulaPanel[])) => {
     const nextPanels = typeof value === "function" ? value(panels) : value;
 
     if (isControlled) {
@@ -278,6 +268,7 @@ const CustomFormulaBox = ({
 
     setInternalPanels(nextPanels);
   };
+
   const [selectedPanelId, setSelectedPanelId] = useState("");
   const [draggedPanelId, setDraggedPanelId] = useState<string | null>(null);
   const [formulaTokens, setFormulaTokens] = useState<EditableFormulaToken[]>([]);
@@ -421,13 +412,13 @@ const CustomFormulaBox = ({
     previousCardRectsRef.current = nextRects;
   };
 
-  const getPanelEvaluation = (panel: FormulaPanel) => calculateExpression(panel.expression, variables);
+  const getPanelEvaluation = (panel: CustomFormulaPanel) => calculateExpression(panel.expression, variables);
 
   const focusFormulaInput = () => {
     requestAnimationFrame(() => formulaInputRef.current?.focus());
   };
 
-  const updateSelectedPanel = (updates: Partial<FormulaPanel>) => {
+  const updateSelectedPanel = (updates: Partial<CustomFormulaPanel>) => {
     if (!selectedPanel) return;
 
     setPanels((currentPanels) =>
@@ -440,11 +431,6 @@ const CustomFormulaBox = ({
   };
 
   const getActiveInsertIndex = () => formulaInsertIndex ?? formulaTokens.length;
-
-  const setInsertIndexAndFocus = (index: number) => {
-    setFormulaInsertIndex(index);
-    focusFormulaInput();
-  };
 
   const insertFormulaTokens = (tokensToInsert: EditableFormulaToken[], shouldFocusInput = true) => {
     if (!selectedPanel || tokensToInsert.length === 0) return;
@@ -465,7 +451,7 @@ const CustomFormulaBox = ({
     }
   };
 
-  const openPanelEditor = (panel: FormulaPanel) => {
+  const openPanelEditor = (panel: CustomFormulaPanel) => {
     setSelectedPanelId(panel.id);
     setFormulaTokens(expressionToEditableTokens(panel.expression, variables));
     setFormulaInputValue("");
@@ -474,7 +460,7 @@ const CustomFormulaBox = ({
   };
 
   const addPanel = () => {
-    const nextPanel: FormulaPanel = {
+    const nextPanel: CustomFormulaPanel = {
       id: createId(),
       title: "New Formula",
       expression: "balance",
@@ -713,7 +699,7 @@ const CustomFormulaBox = ({
     });
   };
 
-  const renderPanelIcon = (panel: FormulaPanel, fontSize: "small" | "medium" = "small") => {
+  const renderPanelIcon = (panel: CustomFormulaPanel, fontSize: "small" | "medium" = "small") => {
     if (panel.iconImageUrl) {
       return <img className="bf-custom-formula-box__icon-image" src={panel.iconImageUrl} alt="" />;
     }
@@ -771,14 +757,16 @@ const CustomFormulaBox = ({
               }}
               type="button"
               draggable
-              className={`bf-custom-formula-box__card bf-custom-formula-box__card--${panel.accent} ${draggedPanelId === panel.id ? "bf-custom-formula-box__card--dragging" : ""
-                }`}
+              className={`bf-custom-formula-box__card bf-custom-formula-box__card--${panel.accent} ${
+                draggedPanelId === panel.id ? "bf-custom-formula-box__card--dragging" : ""
+              }`}
               onClick={() => openPanelEditor(panel)}
               onDragStart={() => handleDragStart(panel.id)}
               onDragOver={(event) => handleDragOver(event, panel.id)}
               onDragEnd={handleDragEnd}
             >
               <span className="bf-custom-formula-box__card-drag-pill" aria-hidden="true" />
+
               {panels.length > 1 ? (
                 <span
                   role="button"
@@ -805,8 +793,9 @@ const CustomFormulaBox = ({
                 <span
                   role="button"
                   tabIndex={0}
-                  className={`bf-custom-formula-box__mobile-order-button ${isFirstPanel ? "bf-custom-formula-box__mobile-order-button--disabled" : ""
-                    }`}
+                  className={`bf-custom-formula-box__mobile-order-button ${
+                    isFirstPanel ? "bf-custom-formula-box__mobile-order-button--disabled" : ""
+                  }`}
                   onClick={(event) => {
                     event.stopPropagation();
                     if (!isFirstPanel) movePanelByStep(panel.id, -1);
@@ -818,8 +807,9 @@ const CustomFormulaBox = ({
                 <span
                   role="button"
                   tabIndex={0}
-                  className={`bf-custom-formula-box__mobile-order-button ${isLastPanel ? "bf-custom-formula-box__mobile-order-button--disabled" : ""
-                    }`}
+                  className={`bf-custom-formula-box__mobile-order-button ${
+                    isLastPanel ? "bf-custom-formula-box__mobile-order-button--disabled" : ""
+                  }`}
                   onClick={(event) => {
                     event.stopPropagation();
                     if (!isLastPanel) movePanelByStep(panel.id, 1);
@@ -848,6 +838,7 @@ const CustomFormulaBox = ({
             </button>
           );
         })}
+
         <button type="button" className="bf-custom-formula-box__empty-card" onClick={addPanel}>
           <span className="bf-custom-formula-box__empty-card-icon">
             <AddRoundedIcon fontSize="large" />
@@ -971,8 +962,9 @@ const CustomFormulaBox = ({
                             }
                           }}
                           type="button"
-                          className={`bf-custom-formula-box__formula-token ${tokenAccent ? `bf-custom-formula-box__formula-token--${tokenAccent}` : ""
-                            }`}
+                          className={`bf-custom-formula-box__formula-token ${
+                            tokenAccent ? `bf-custom-formula-box__formula-token--${tokenAccent}` : ""
+                          }`}
                           onClick={(event) => event.stopPropagation()}
                         >
                           <span className="bf-custom-formula-box__formula-token-text">{token.value}</span>
@@ -1004,8 +996,9 @@ const CustomFormulaBox = ({
                     <button
                       key={`${variable.source}-${variable.key}`}
                       type="button"
-                      className={`bf-custom-formula-box__suggestion ${highlightedSuggestionIndex === variableIndex ? "bf-custom-formula-box__suggestion--active" : ""
-                        }`}
+                      className={`bf-custom-formula-box__suggestion ${
+                        highlightedSuggestionIndex === variableIndex ? "bf-custom-formula-box__suggestion--active" : ""
+                      }`}
                       onMouseDown={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -1028,14 +1021,16 @@ const CustomFormulaBox = ({
 
             <Tooltip title={selectedPanelEvaluation?.error ?? ""} disableHoverListener={!selectedPanelEvaluation?.error} arrow>
               <div
-                className={`bf-custom-formula-box__result-preview ${selectedPanelEvaluation?.error ? "bf-custom-formula-box__result-preview--invalid" : ""
-                  }`}
+                className={`bf-custom-formula-box__result-preview ${
+                  selectedPanelEvaluation?.error ? "bf-custom-formula-box__result-preview--invalid" : ""
+                }`}
               >
                 <span>Result</span>
-                <strong>{selectedPanelEvaluation?.value === null ? "Invalid" : currencyFormatter.format(selectedPanelEvaluation?.value ?? 0)}</strong>
+                <strong>
+                  {selectedPanelEvaluation?.value === null ? "Invalid" : currencyFormatter.format(selectedPanelEvaluation?.value ?? 0)}
+                </strong>
               </div>
             </Tooltip>
-
           </aside>
 
           <IconSelectorMenu

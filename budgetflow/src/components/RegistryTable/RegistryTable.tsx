@@ -31,6 +31,7 @@ type Props = {
   icons?: IconOption[];
   colorPresets?: string[];
   rows: RegistryRow[];
+  previousRows?: RegistryRow[];
   onChangeRows: (rows: RegistryRow[]) => void;
 };
 
@@ -103,6 +104,13 @@ const buildTotalSteps = (rows: RegistryRow[]): TotalStep[] => {
         running,
       };
     });
+};
+
+const getRowComparisonKey = (row: RegistryRow) => {
+  const labelKey = (row.label || '').trim().toLowerCase();
+  const iconKey = (row.iconId || '').trim().toLowerCase();
+
+  return `${labelKey}::${iconKey}`;
 };
 
 const HeaderPillButton = ({ label, onClick, }: { label: string; onClick: (e: React.MouseEvent<HTMLElement>) => void; }) => (
@@ -292,10 +300,10 @@ const NoteCell = ({ value, onSave }: { value: string; onSave: (nextValue: string
   );
 };
 
-const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, colorPresets = COLOR_PRESETS, rows, onChangeRows }: Props): JSX.Element => {
+const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, colorPresets = COLOR_PRESETS, rows, previousRows = [], onChangeRows }: Props): JSX.Element => {
   const defaultRowColor = colorPresets[0] ?? '#1a73e8';
   const labelFocusRef = useRef<HTMLInputElement | null>(null);
-  const [editing, setEditing] = useState<{ rowId: string; field: 'label' | 'amount' | 'prevAmount' } | null>(null);
+  const [editing, setEditing] = useState<{ rowId: string; field: 'label' | 'amount' } | null>(null);
   const [currency, setCurrency] = useState<CurrencyOption['code']>('EUR');
   const [decimalSeparator, setDecimalSeparator] = useState<DecimalSeparator>(',');
   const [currencyAnchor, setCurrencyAnchor] = useState<HTMLElement | null>(null);
@@ -317,6 +325,17 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
 
   const totalSteps = useMemo(() => buildTotalSteps(rows), [rows]);
   const total = useMemo(() => (totalSteps.length ? totalSteps[totalSteps.length - 1].running : 0), [totalSteps]);
+  const previousAmountByKey = useMemo(() => {
+    const amountByKey = new Map<string, number>();
+
+    for (const previousRow of previousRows) {
+      if (typeof previousRow.amount !== 'number') continue;
+
+      amountByKey.set(getRowComparisonKey(previousRow), previousRow.amount);
+    }
+
+    return amountByKey;
+  }, [previousRows]);
   const rowPendingDelete = useMemo(
     () => rows.find((row) => row.id === rowIdPendingDelete) ?? null,
     [rowIdPendingDelete, rows],
@@ -329,7 +348,7 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
   const updateRow = (id: string, patch: Partial<RegistryRow>) => {
     onChangeRows(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   };
-  const startEdit = (rowId: string, field: 'label' | 'amount' | 'prevAmount') => {
+  const startEdit = (rowId: string, field: 'label' | 'amount') => {
     setEditing({ rowId, field });
 
     if (field === 'label') {
@@ -509,6 +528,7 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
                     const IconComp = getIconRender(row.iconId);
                     const rowBg = row.recurring ? 'rgba(26,115,232,0.10)' : 'inherit';
                     const isEditingRow = editing?.rowId === row.id;
+                    const previousAmount = previousAmountByKey.get(getRowComparisonKey(row)) ?? null;
 
                     return (
                       <Fragment key={row.id}>
@@ -615,41 +635,21 @@ const RegistryTable = ({ title, invertComparison = false, icons = ICON_OPTIONS, 
                               </TableCell>
 
                               <TableCell align="center">
-                                {isEditingRow && editing?.field === 'prevAmount' ? (
-                                  <TextField
-                                    value={toDisplayNumber(row.prevAmount, decimalSeparator)}
-                                    onChange={(e) => updateRow(row.id, { prevAmount: parseNumber(e.target.value) })}
-                                    onBlur={stopEdit}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter' || e.key === 'Escape') stopEdit();
-                                    }}
-                                    size="small"
-                                    fullWidth
-                                    inputMode="decimal"
-                                    inputProps={{ style: { textAlign: 'left' } }}
-                                    InputProps={{
-                                      startAdornment: <InputAdornment position="start">{currencySymbol}</InputAdornment>,
-                                    }}
-                                    autoFocus
-                                    className="bf-registry-table__cell-input"
-                                  />
-                                ) : (
-                                  <div className="bf-cell" onClick={() => startEdit(row.id, 'prevAmount')}>
-                                    <Typography variant="body2" sx={{ fontWeight: 800 }}>
-                                      {row.prevAmount === null ? (
-                                        <span className="bf-cell__placeholder">{currencySymbol} 0</span>
-                                      ) : (
-                                        formatCurrency(row.prevAmount, currency, decimalSeparator)
-                                      )}
-                                    </Typography>
-                                  </div>
-                                )}
+                                <div className="bf-cell bf-cell--readonly">
+                                  <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                                    {previousAmount === null ? (
+                                      <span className="bf-cell__placeholder">{currencySymbol} 0</span>
+                                    ) : (
+                                      formatCurrency(previousAmount, currency, decimalSeparator)
+                                    )}
+                                  </Typography>
+                                </div>
                               </TableCell>
 
                               <TableCell align="center">
                                 <ComparisonCell
                                   amount={row.amount}
-                                  prevAmount={row.prevAmount}
+                                  prevAmount={previousAmount}
                                   invert={invertComparison}
                                   currency={currency}
                                   decimalSeparator={decimalSeparator}

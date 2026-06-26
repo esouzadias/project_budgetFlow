@@ -1,8 +1,9 @@
-import type { RegistryRow } from '../../components/RegistryTable/RegistryTable.types';
+import type { IconId } from "../../components/IconSelectorMenu/IconSelectorMenu.types";
+import type { RegistryRow } from "../../components/RegistryTable/RegistryTable.types";
 
-export type MonthKey = `${number}-${'01' | '02' | '03' | '04' | '05' | '06' | '07' | '08' | '09' | '10' | '11' | '12'}`;
+export type MonthKey = `${number}-${"01" | "02" | "03" | "04" | "05" | "06" | "07" | "08" | "09" | "10" | "11" | "12"}`;
 
-export type BudgetTableType = 'income' | 'expense' | 'saving' | 'debt' | 'custom';
+export type BudgetTableType = "income" | "expense" | "saving" | "debt" | "custom";
 
 export type BudgetTable = {
   id: string;
@@ -12,17 +13,19 @@ export type BudgetTable = {
   rows: RegistryRow[];
 };
 
+export type FormulaAccent = "green" | "red" | "blue" | "purple" | "orange";
+
 export type CustomFormulaPanel = {
   id: string;
   title: string;
   expression: string;
-  accent: string;
-  iconId: any;
+  accent: FormulaAccent;
+  iconId: IconId;
   iconImageUrl?: string | null;
   color: string;
 };
 
-export type DashboardChartType = 'bar' | 'line' | 'pie';
+export type DashboardChartType = "bar" | "line" | "pie";
 
 export type DashboardChart = {
   id: string;

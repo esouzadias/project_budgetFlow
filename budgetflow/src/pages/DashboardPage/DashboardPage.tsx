@@ -13,10 +13,51 @@ import DashboardGrid, { type DashboardGridBlock } from "./components/DashboardGr
 import CustomFormulaBox from "../../components/CustomFormulaBox/CustomFormulaBox";
 import GenericPopup from "../../components/GenericPopup/GenericPopup";
 import GenericOptionsPopup, { type GenericOptionsPopupOption } from "../../components/GenericOptionsPopup/GenericOptionsPopup";
+import PeriodSelector from "../../components/PeriodSelector/PeriodSelector";
 import { loadLocalBudgetDB, saveLocalBudgetDB } from "../../storage/budgetStorage";
 
 import type { RegistryRow } from "../../components/RegistryTable/RegistryTable.types";
-import type { BudgetTable, BudgetTableType, DashboardStore, MonthKey, MonthSnapshot } from "./DashboardPage.types";
+import type {
+  BudgetTable,
+  BudgetTableType,
+  CustomFormulaPanel,
+  DashboardChart,
+  DashboardStore,
+  MonthKey,
+  MonthSnapshot,
+} from "./DashboardPage.types";
+
+const createId = () => crypto.randomUUID();
+
+const createDefaultFormulaPanels = (): CustomFormulaPanel[] => [
+  {
+    id: createId(),
+    title: "Total Income",
+    expression: "total_income",
+    accent: "green",
+    iconId: "paid",
+    iconImageUrl: null,
+    color: "#34a853",
+  },
+  {
+    id: createId(),
+    title: "Total Expenses",
+    expression: "total_expenses",
+    accent: "red",
+    iconId: "receipt",
+    iconImageUrl: null,
+    color: "#ea4335",
+  },
+  {
+    id: createId(),
+    title: "Balance",
+    expression: "total_income - total_expenses",
+    accent: "blue",
+    iconId: "bank",
+    iconImageUrl: null,
+    color: "#1a73e8",
+  },
+];
 
 const createEmptyPeriod = (): MonthSnapshot => ({
   tables: [
@@ -35,17 +76,14 @@ const createEmptyPeriod = (): MonthSnapshot => ({
       rows: [],
     },
   ],
-  customFormulaPanels: [],
+  customFormulaPanels: createDefaultFormulaPanels(),
   charts: [],
 });
-
-const createId = () => crypto.randomUUID();
 
 type UndoSnapshot = {
   activePeriodKey: MonthKey;
   periods: Record<MonthKey, MonthSnapshot>;
   currency: string;
-  customFormulaPanels: any[];
 };
 
 const tableCreationOptions: GenericOptionsPopupOption[] = [
@@ -94,11 +132,77 @@ const getDashboardBlockSize = (index: number, totalBlocks: number) => {
   return "third" as const;
 };
 
+const getMonthKeyFromDate = (date: Date): MonthKey => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `${year}-${month}` as MonthKey;
+};
+
+const getCurrentMonthKey = (): MonthKey => getMonthKeyFromDate(new Date());
+
+const shiftMonthKey = (monthKey: MonthKey, offset: number): MonthKey => {
+  const [yearValue, monthValue] = monthKey.split("-").map(Number);
+  const nextDate = new Date(yearValue, monthValue - 1 + offset, 1);
+
+  return getMonthKeyFromDate(nextDate);
+};
+
+const getPreviousMonthKey = (monthKey: MonthKey): MonthKey => shiftMonthKey(monthKey, -1);
+
+const cloneRecurringRows = (rows: RegistryRow[]): RegistryRow[] => {
+  return rows
+    .filter((row) => row.recurring)
+    .map((row) => ({
+      ...row,
+      id: createId(),
+    }));
+};
+
+const cloneFormulaPanels = (panels: CustomFormulaPanel[]): CustomFormulaPanel[] => {
+  return panels.map((panel) => ({
+    ...panel,
+    id: createId(),
+  }));
+};
+
+const cloneCharts = (charts: DashboardChart[]): DashboardChart[] => {
+  return charts.map((chart) => ({
+    ...chart,
+    id: createId(),
+    sourceTableIds: [...chart.sourceTableIds],
+  }));
+};
+
+const createPeriodFromPreviousPeriod = (previousPeriod?: MonthSnapshot | null): MonthSnapshot => {
+  if (!previousPeriod) return createEmptyPeriod();
+
+  return {
+    tables: previousPeriod.tables.map((table) => ({
+      ...table,
+      id: createId(),
+      rows: cloneRecurringRows(table.rows),
+    })),
+    customFormulaPanels:
+      previousPeriod.customFormulaPanels.length > 0
+        ? cloneFormulaPanels(previousPeriod.customFormulaPanels)
+        : createDefaultFormulaPanels(),
+    charts: cloneCharts(previousPeriod.charts),
+  };
+};
+
+const getMatchingPreviousTable = (previousTables: BudgetTable[], table: BudgetTable) => {
+  return (
+    previousTables.find((previousTable) => previousTable.type === table.type && previousTable.name === table.name) ??
+    previousTables.find((previousTable) => previousTable.type === table.type) ??
+    null
+  );
+};
+
 const DashboardPage = () => {
-  const [activePeriodKey, setActivePeriodKey] = useState<MonthKey>("2026-06");
+  const [activePeriodKey, setActivePeriodKey] = useState<MonthKey>(getCurrentMonthKey());
   const [periods, setPeriods] = useState<Record<MonthKey, MonthSnapshot>>({});
   const [currency, setCurrency] = useState("EUR");
-  const [customFormulaPanels, setCustomFormulaPanels] = useState<any[]>([]);
   const [tableIdPendingDelete, setTableIdPendingDelete] = useState<string | null>(null);
   const [tableOptionsAnchor, setTableOptionsAnchor] = useState<HTMLElement | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -111,6 +215,8 @@ const DashboardPage = () => {
 
   const activePeriod = periods[activePeriodKey] ?? createEmptyPeriod();
   const tables = activePeriod.tables;
+  const customFormulaPanels = activePeriod.customFormulaPanels;
+  const previousPeriod = periods[getPreviousMonthKey(activePeriodKey)] ?? null;
 
   const visibleTables = useMemo(
     () => tables.filter((table: BudgetTable) => table.visible),
@@ -137,11 +243,10 @@ const DashboardPage = () => {
       activePeriodKey,
       periods,
       currency,
-      customFormulaPanels,
     };
 
     setCanUndo(true);
-  }, [activePeriodKey, periods, currency, customFormulaPanels]);
+  }, [activePeriodKey, periods, currency]);
 
   const clearUndoSnapshot = () => {
     undoSnapshotRef.current = null;
@@ -155,25 +260,48 @@ const DashboardPage = () => {
     setActivePeriodKey(snapshot.activePeriodKey);
     setPeriods(snapshot.periods);
     setCurrency(snapshot.currency);
-    setCustomFormulaPanels(snapshot.customFormulaPanels);
     clearUndoSnapshot();
     setSaveStatus("saving");
   };
 
+  const changeActivePeriod = useCallback((nextPeriodKey: MonthKey) => {
+    captureUndoSnapshot();
+
+    setPeriods((currentPeriods) => {
+      if (currentPeriods[nextPeriodKey]) return currentPeriods;
+
+      const previousPeriodKey = getPreviousMonthKey(nextPeriodKey);
+      const previousPeriodForTemplate = currentPeriods[previousPeriodKey] ?? currentPeriods[activePeriodKey] ?? createEmptyPeriod();
+
+      return {
+        ...currentPeriods,
+        [nextPeriodKey]: createPeriodFromPreviousPeriod(previousPeriodForTemplate),
+      };
+    });
+
+    setActivePeriodKey(nextPeriodKey);
+  }, [activePeriodKey, captureUndoSnapshot]);
+
+  const goToPreviousPeriod = () => {
+    changeActivePeriod(shiftMonthKey(activePeriodKey, -1));
+  };
+
+  const goToNextPeriod = () => {
+    changeActivePeriod(shiftMonthKey(activePeriodKey, 1));
+  };
+
+  const goToCurrentPeriod = () => {
+    changeActivePeriod(getCurrentMonthKey());
+  };
+
   useEffect(() => {
     const data = loadLocalBudgetDB();
-    const loadedPeriod = data.periods[data.activePeriodKey] ?? createEmptyPeriod();
 
     setActivePeriodKey(data.activePeriodKey);
     setPeriods(data.periods);
     setCurrency(data.currency);
-    setCustomFormulaPanels(loadedPeriod.customFormulaPanels);
     setHasLoadedBudgetDB(true);
   }, []);
-
-  useEffect(() => {
-    setCustomFormulaPanels(activePeriod.customFormulaPanels);
-  }, [activePeriod.customFormulaPanels]);
 
   useEffect(() => {
     return () => {
@@ -290,9 +418,8 @@ const DashboardPage = () => {
     setTableIdPendingDelete(null);
   };
 
-  const updateCustomFormulaPanels = useCallback((panels: any[]) => {
+  const updateCustomFormulaPanels = useCallback((panels: CustomFormulaPanel[]) => {
     captureUndoSnapshot();
-    setCustomFormulaPanels(panels);
     updateActivePeriod({ customFormulaPanels: panels });
   }, [updateActivePeriod, captureUndoSnapshot]);
 
@@ -356,12 +483,13 @@ const DashboardPage = () => {
               title={table.name}
               invertComparison={table.type === "expense" || table.type === "debt"}
               rows={table.rows}
+              previousRows={getMatchingPreviousTable(previousPeriod?.tables ?? [], table)?.rows ?? []}
               onChangeRows={(rows) => updateTableRows(table.id, rows)}
             />
           </div>
         ),
       })),
-    [visibleTables, updateTableRows],
+    [visibleTables, updateTableRows, previousPeriod],
   );
 
   return (
@@ -399,6 +527,16 @@ const DashboardPage = () => {
         />
       </section>
 
+      <section className="dashboard-page__period-selector-section">
+        <PeriodSelector
+          activePeriodKey={activePeriodKey}
+          locale="en-US"
+          onPreviousPeriod={goToPreviousPeriod}
+          onNextPeriod={goToNextPeriod}
+          onCurrentPeriod={goToCurrentPeriod}
+        />
+      </section>
+
       <section id="tables" className="dashboard-page__tables-header">
         <div>
           <p className="dashboard-page__tables-eyebrow">Tables</p>
@@ -411,9 +549,7 @@ const DashboardPage = () => {
         </button>
       </section>
 
-      <section id="charts">
-        
-      </section>
+      <section id="charts"></section>
 
       <GenericOptionsPopup
         open={Boolean(tableOptionsAnchor)}

@@ -144,10 +144,23 @@
     }
   }
 
+
   .bf-registry-table__cell-input--compact {
     .MuiInputBase-root {
       min-height: 36px;
     }
+  }
+
+  .bf-cell--readonly {
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .bf-cell--readonly:hover {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
   }
 
   .bf-registry-table__empty-cell {
