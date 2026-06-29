@@ -453,7 +453,7 @@ const DashboardPage = () => {
         hideSaveStatusTimeout.current = window.setTimeout(() => {
           setSaveStatus("idle");
           hideSaveStatusTimeout.current = null;
-        }, 5200);
+        }, 3200);
       } catch {
         setSaveStatus("error");
       }

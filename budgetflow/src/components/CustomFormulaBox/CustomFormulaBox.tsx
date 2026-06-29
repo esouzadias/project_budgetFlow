@@ -1,15 +1,6 @@
 import "./CustomFormulaBox.style.less";
 
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type DragEvent,
-  type KeyboardEvent,
-  type MouseEvent,
-} from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type DragEvent } from "react";
 
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
@@ -18,32 +9,19 @@ import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownR
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import Tooltip from "@mui/material/Tooltip";
 
-import IconSelectorMenu from "../IconSelectorMenu/IconSelectorMenu";
+import AdvancedFormulaTool from "../AdvancedFormulaTool/AdvancedFormulaTool";
 import GenericPopup from "../GenericPopup/GenericPopup";
+import IconSelectorMenu from "../IconSelectorMenu/IconSelectorMenu";
 import { COLOR_PRESETS, ICON_OPTIONS } from "../IconSelectorMenu/IconSelectorMenu.db";
 
 import type { IconId } from "../IconSelectorMenu/IconSelectorMenu.types";
 import type { RegistryRow } from "../RegistryTable/RegistryTable.types";
 import type { CustomFormulaPanel } from "../../pages/DashboardPage/DashboardPage.types";
-
-type FormulaVariableSource = "income" | "expense" | "saving" | "formula" | "system";
+import type { FormulaVariable, FormulaVariableSource } from "../VariablesViewer/VariablesViewer";
 
 type FormulaEvaluation = {
   value: number | null;
   error?: string;
-};
-
-type FormulaVariable = {
-  key: string;
-  label: string;
-  value: number;
-  source: FormulaVariableSource;
-};
-
-type EditableFormulaToken = {
-  id: string;
-  value: string;
-  type: "variable" | "operator" | "number" | "text";
 };
 
 type CustomFormulaBoxProps = {
@@ -84,15 +62,21 @@ const defaultPanels: CustomFormulaPanel[] = [
   },
 ];
 
-const variableAccentByIndex: Array<"green" | "blue" | "purple" | "orange"> = ["green", "blue", "purple", "orange"];
 const operatorValues = new Set(["+", "-", "*", "/", "(", ")"]);
 
-const currencyFormatter = new Intl.NumberFormat("pt-PT", {
-  style: "currency",
-  currency: "EUR",
-});
-
 const createId = () => crypto.randomUUID();
+
+const formatCurrencyValue = (value: number) => {
+  const normalizedValue = Number.parseFloat(value.toFixed(10));
+  const hasDecimals = !Number.isInteger(normalizedValue);
+
+  return new Intl.NumberFormat("pt-PT", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: hasDecimals ? 2 : 0,
+    maximumFractionDigits: 10,
+  }).format(normalizedValue);
+};
 
 const normalizeFormulaKey = (value: string) => {
   return value
@@ -102,6 +86,20 @@ const normalizeFormulaKey = (value: string) => {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+};
+
+const normalizeFormulaNumber = (value: number) => {
+  return Number.parseFloat(value.toFixed(10));
+};
+
+const getTokenType = (value: string, variables: FormulaVariable[]) => {
+  const variableKeys = new Set(variables.map((variable) => variable.key));
+
+  if (variableKeys.has(value)) return "variable";
+  if (operatorValues.has(value)) return "operator";
+  if (/^\d+(?:[.,]\d+)?$/.test(value)) return "number";
+
+  return "text";
 };
 
 const createVariablesFromRows = (
@@ -125,28 +123,9 @@ const createVariablesFromRows = (
       label: cleanLabel || key,
       value: row.amount ?? 0,
       source,
+      color: row.color,
     };
   });
-};
-
-const getCanonicalTokenValue = (value: string, variables: FormulaVariable[]) => {
-  const normalizedValue = normalizeFormulaKey(value);
-
-  const matchingVariable = variables.find((variable) => {
-    return normalizeFormulaKey(variable.key) === normalizedValue || normalizeFormulaKey(variable.label) === normalizedValue;
-  });
-
-  return matchingVariable?.key ?? value.trim();
-};
-
-const getTokenType = (value: string, variables: FormulaVariable[]): EditableFormulaToken["type"] => {
-  const variableKeys = new Set(variables.map((variable) => variable.key));
-
-  if (variableKeys.has(value)) return "variable";
-  if (operatorValues.has(value)) return "operator";
-  if (/^\d+(?:[.,]\d+)?$/.test(value)) return "number";
-
-  return "text";
 };
 
 const calculateExpression = (expression: string, variables: FormulaVariable[]): FormulaEvaluation => {
@@ -159,7 +138,7 @@ const calculateExpression = (expression: string, variables: FormulaVariable[]): 
   const valuesByKey = new Map(variables.map((variable) => [variable.key, variable.value]));
   const tokens = trimmedExpression.match(/[a-zA-Z_][a-zA-Z0-9_]*|\d+(?:[.,]\d+)?|[+\-*/()]|\S+/g) ?? [];
 
-  let previousTokenType: EditableFormulaToken["type"] | null = null;
+  let previousTokenType: string | null = null;
   let openParentheses = 0;
 
   for (const token of tokens) {
@@ -209,42 +188,10 @@ const calculateExpression = (expression: string, variables: FormulaVariable[]): 
       return { value: null, error: "Formula result is not a valid finite number." };
     }
 
-    return { value };
+    return { value: normalizeFormulaNumber(value) };
   } catch {
     return { value: null, error: "Formula could not be calculated." };
   }
-};
-
-const expressionToEditableTokens = (expression: string, variables: FormulaVariable[]): EditableFormulaToken[] => {
-  const parts = expression.match(/[a-zA-Z_][a-zA-Z0-9_]*|\d+(?:[.,]\d+)?|[+\-*/()]|\S+/g) ?? [];
-
-  return parts.map((part) => ({
-    id: createId(),
-    value: part,
-    type: getTokenType(part, variables),
-  }));
-};
-
-const editableTokensToExpression = (tokens: EditableFormulaToken[], inputValue: string) => {
-  return [...tokens.map((token) => token.value), inputValue.trim()].filter(Boolean).join(" ");
-};
-
-const getInsertIndexFromPointer = (event: MouseEvent<HTMLDivElement>, tokenElements: Array<HTMLElement | null>) => {
-  const pointerX = event.clientX;
-
-  for (let index = 0; index < tokenElements.length; index += 1) {
-    const tokenElement = tokenElements[index];
-    if (!tokenElement) continue;
-
-    const rect = tokenElement.getBoundingClientRect();
-    const midpoint = rect.left + rect.width / 2;
-
-    if (pointerX < midpoint) {
-      return index;
-    }
-  }
-
-  return tokenElements.length;
 };
 
 const CustomFormulaBox = ({
@@ -255,6 +202,14 @@ const CustomFormulaBox = ({
   onChangeCustomFormulaPanels,
 }: CustomFormulaBoxProps) => {
   const [internalPanels, setInternalPanels] = useState<CustomFormulaPanel[]>(defaultPanels);
+  const [selectedPanelId, setSelectedPanelId] = useState("");
+  const [draggedPanelId, setDraggedPanelId] = useState<string | null>(null);
+  const [iconEditorAnchor, setIconEditorAnchor] = useState<HTMLElement | null>(null);
+  const [panelIdPendingDelete, setPanelIdPendingDelete] = useState<string | null>(null);
+
+  const cardRefs = useRef(new Map<string, HTMLButtonElement>());
+  const previousCardRectsRef = useRef(new Map<string, DOMRect>());
+
   const isControlled = customFormulaPanels !== undefined;
   const panels = isControlled ? customFormulaPanels : internalPanels;
 
@@ -268,21 +223,6 @@ const CustomFormulaBox = ({
 
     setInternalPanels(nextPanels);
   };
-
-  const [selectedPanelId, setSelectedPanelId] = useState("");
-  const [draggedPanelId, setDraggedPanelId] = useState<string | null>(null);
-  const [formulaTokens, setFormulaTokens] = useState<EditableFormulaToken[]>([]);
-  const [formulaInputValue, setFormulaInputValue] = useState("");
-  const [formulaInsertIndex, setFormulaInsertIndex] = useState<number | null>(null);
-  const [formulaInputFocused, setFormulaInputFocused] = useState(false);
-  const [highlightedSuggestionIndex, setHighlightedSuggestionIndex] = useState(0);
-  const [iconEditorAnchor, setIconEditorAnchor] = useState<HTMLElement | null>(null);
-  const [panelIdPendingDelete, setPanelIdPendingDelete] = useState<string | null>(null);
-
-  const formulaInputRef = useRef<HTMLInputElement | null>(null);
-  const formulaTokenRefs = useRef(new Map<string, HTMLButtonElement | HTMLSpanElement>());
-  const cardRefs = useRef(new Map<string, HTMLButtonElement>());
-  const previousCardRectsRef = useRef(new Map<string, DOMRect>());
 
   const variables = useMemo(() => {
     const rowVariables = [
@@ -304,23 +244,25 @@ const CustomFormulaBox = ({
       .reduce((total, variable) => total + variable.value, 0);
 
     const systemVariables: FormulaVariable[] = [
-      { key: "total_income", label: "Total Income", value: totalIncome, source: "system" },
-      { key: "total_expenses", label: "Total Expenses", value: totalExpenses, source: "system" },
-      { key: "total_savings", label: "Total Savings", value: totalSavings, source: "system" },
-      { key: "balance", label: "Balance", value: totalIncome - totalExpenses, source: "system" },
+      { key: "total_income", label: "Total Income", value: totalIncome, source: "system", color: COLOR_PRESETS[13] ?? "#34a853" },
+      { key: "total_expenses", label: "Total Expenses", value: totalExpenses, source: "system", color: COLOR_PRESETS[7] ?? "#ea4335" },
+      { key: "total_savings", label: "Total Savings", value: totalSavings, source: "system", color: COLOR_PRESETS[0] ?? "#1a73e8" },
+      { key: "balance", label: "Balance", value: totalIncome - totalExpenses, source: "system", color: COLOR_PRESETS[0] ?? "#1a73e8" },
     ];
 
     const formulaVariables: FormulaVariable[] = [];
+    const reservedVariableKeys = new Set([...rowVariables, ...systemVariables].map((variable) => variable.key));
 
     for (const panel of panels) {
       const key = normalizeFormulaKey(panel.title);
-      if (!key) continue;
+      if (!key || reservedVariableKeys.has(key)) continue;
 
       formulaVariables.push({
         key,
         label: panel.title,
         value: calculateExpression(panel.expression, [...rowVariables, ...systemVariables, ...formulaVariables]).value ?? 0,
         source: "formula",
+        color: panel.color,
       });
     }
 
@@ -353,27 +295,6 @@ const CustomFormulaBox = ({
       recurring: false,
     };
   }, [selectedPanel]);
-
-  const filteredVariableSuggestions = useMemo(() => {
-    const query = normalizeFormulaKey(formulaInputValue);
-
-    if (!query) return [];
-
-    return variables
-      .filter((variable) => {
-        const variableKey = normalizeFormulaKey(variable.key);
-        const variableLabel = normalizeFormulaKey(variable.label);
-
-        return variableKey.includes(query) || variableLabel.includes(query);
-      })
-      .slice(0, 10);
-  }, [formulaInputValue, variables]);
-
-  const showVariableSuggestions = formulaInputFocused && filteredVariableSuggestions.length > 0;
-
-  useEffect(() => {
-    setHighlightedSuggestionIndex(0);
-  }, [formulaInputValue]);
 
   useLayoutEffect(() => {
     if (previousCardRectsRef.current.size === 0) return;
@@ -414,8 +335,13 @@ const CustomFormulaBox = ({
 
   const getPanelEvaluation = (panel: CustomFormulaPanel) => calculateExpression(panel.expression, variables);
 
-  const focusFormulaInput = () => {
-    requestAnimationFrame(() => formulaInputRef.current?.focus());
+  const openPanelEditor = (panel: CustomFormulaPanel) => {
+    setSelectedPanelId(panel.id);
+  };
+
+  const closeEditor = () => {
+    setSelectedPanelId("");
+    setIconEditorAnchor(null);
   };
 
   const updateSelectedPanel = (updates: Partial<CustomFormulaPanel>) => {
@@ -424,39 +350,6 @@ const CustomFormulaBox = ({
     setPanels((currentPanels) =>
       currentPanels.map((panel) => (panel.id === selectedPanel.id ? { ...panel, ...updates } : panel)),
     );
-  };
-
-  const syncFormulaExpression = (tokens: EditableFormulaToken[]) => {
-    updateSelectedPanel({ expression: editableTokensToExpression(tokens, "") });
-  };
-
-  const getActiveInsertIndex = () => formulaInsertIndex ?? formulaTokens.length;
-
-  const insertFormulaTokens = (tokensToInsert: EditableFormulaToken[], shouldFocusInput = true) => {
-    if (!selectedPanel || tokensToInsert.length === 0) return;
-
-    const insertIndex = getActiveInsertIndex();
-    const nextTokens = [...formulaTokens];
-
-    nextTokens.splice(insertIndex, 0, ...tokensToInsert);
-
-    setFormulaTokens(nextTokens);
-    setFormulaInputValue("");
-    setFormulaInsertIndex(insertIndex + tokensToInsert.length);
-    setHighlightedSuggestionIndex(0);
-    syncFormulaExpression(nextTokens);
-
-    if (shouldFocusInput) {
-      focusFormulaInput();
-    }
-  };
-
-  const openPanelEditor = (panel: CustomFormulaPanel) => {
-    setSelectedPanelId(panel.id);
-    setFormulaTokens(expressionToEditableTokens(panel.expression, variables));
-    setFormulaInputValue("");
-    setFormulaInsertIndex(null);
-    setHighlightedSuggestionIndex(0);
   };
 
   const addPanel = () => {
@@ -471,144 +364,9 @@ const CustomFormulaBox = ({
     };
 
     captureCardRects();
+
     setPanels((currentPanels) => [...currentPanels, nextPanel]);
     setSelectedPanelId(nextPanel.id);
-    setFormulaTokens(expressionToEditableTokens(nextPanel.expression, variables));
-    setFormulaInputValue("");
-    setFormulaInsertIndex(null);
-    setHighlightedSuggestionIndex(0);
-  };
-
-  const addFormulaToken = (value: string, shouldFocusInput = true) => {
-    if (!selectedPanel) return;
-
-    const canonicalValue = getCanonicalTokenValue(value, variables);
-    if (!canonicalValue) return;
-
-    insertFormulaTokens(
-      [
-        {
-          id: createId(),
-          value: canonicalValue,
-          type: getTokenType(canonicalValue, variables),
-        },
-      ],
-      shouldFocusInput,
-    );
-  };
-
-  const addVariableSuggestion = (variable: FormulaVariable) => {
-    if (!selectedPanel) return;
-
-    insertFormulaTokens([
-      {
-        id: createId(),
-        value: variable.key,
-        type: "variable" as const,
-      },
-    ]);
-  };
-
-  const removeFormulaToken = (tokenId: string) => {
-    const removedIndex = formulaTokens.findIndex((token) => token.id === tokenId);
-    const nextTokens = formulaTokens.filter((token) => token.id !== tokenId);
-
-    setFormulaTokens(nextTokens);
-    setFormulaInsertIndex((currentIndex) => {
-      if (currentIndex === null) return null;
-      if (removedIndex < 0) return currentIndex;
-      if (currentIndex > removedIndex) return Math.max(0, currentIndex - 1);
-      return Math.min(currentIndex, nextTokens.length);
-    });
-    syncFormulaExpression(nextTokens);
-  };
-
-  const handleFormulaInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (showVariableSuggestions && event.key === "ArrowDown") {
-      event.preventDefault();
-      setHighlightedSuggestionIndex((currentIndex) => Math.min(currentIndex + 1, filteredVariableSuggestions.length - 1));
-      return;
-    }
-
-    if (showVariableSuggestions && event.key === "ArrowUp") {
-      event.preventDefault();
-      setHighlightedSuggestionIndex((currentIndex) => Math.max(currentIndex - 1, 0));
-      return;
-    }
-
-    if (showVariableSuggestions && event.key === "Enter") {
-      event.preventDefault();
-      addVariableSuggestion(filteredVariableSuggestions[highlightedSuggestionIndex]);
-      return;
-    }
-
-    if (event.key === "Escape") {
-      setFormulaInputFocused(false);
-      return;
-    }
-
-    if (event.key === " " || event.key === "Enter") {
-      event.preventDefault();
-
-      if (formulaInputValue.trim()) {
-        addFormulaToken(formulaInputValue);
-      }
-
-      return;
-    }
-
-    if (operatorValues.has(event.key)) {
-      event.preventDefault();
-
-      const tokensToInsert: EditableFormulaToken[] = [];
-
-      if (formulaInputValue.trim()) {
-        const value = getCanonicalTokenValue(formulaInputValue, variables);
-
-        tokensToInsert.push({
-          id: createId(),
-          value,
-          type: getTokenType(value, variables),
-        });
-      }
-
-      tokensToInsert.push({
-        id: createId(),
-        value: event.key,
-        type: "operator",
-      });
-
-      insertFormulaTokens(tokensToInsert);
-      return;
-    }
-
-    if (event.key === "Backspace" && formulaInputValue.length === 0 && formulaTokens.length > 0) {
-      const insertIndex = getActiveInsertIndex();
-      if (insertIndex <= 0) return;
-
-      const nextTokens = [...formulaTokens];
-      nextTokens.splice(insertIndex - 1, 1);
-
-      setFormulaTokens(nextTokens);
-      setFormulaInsertIndex(insertIndex - 1);
-      syncFormulaExpression(nextTokens);
-    }
-  };
-
-  const handleFormulaInputBlur = () => {
-    setFormulaInputFocused(false);
-
-    if (formulaInputValue.trim()) {
-      addFormulaToken(formulaInputValue, false);
-    }
-  };
-
-  const handleFormulaInputAreaMouseDown = (event: MouseEvent<HTMLDivElement>) => {
-    const tokenElements = formulaTokens.map((token) => formulaTokenRefs.current.get(token.id) ?? null);
-    const nextIndex = getInsertIndexFromPointer(event, tokenElements);
-
-    setFormulaInsertIndex(nextIndex);
-    focusFormulaInput();
   };
 
   const requestDeletePanel = (panelId: string) => {
@@ -627,11 +385,7 @@ const CustomFormulaBox = ({
     setPanelIdPendingDelete(null);
 
     if (selectedPanelId === panelId) {
-      setSelectedPanelId("");
-      setIconEditorAnchor(null);
-      setFormulaTokens([]);
-      setFormulaInputValue("");
-      setFormulaInsertIndex(null);
+      closeEditor();
     }
   };
 
@@ -710,24 +464,6 @@ const CustomFormulaBox = ({
       ICON_OPTIONS[0];
 
     return iconOption.render({ fontSize });
-  };
-
-  const renderFormulaInput = (index: number) => {
-    if (getActiveInsertIndex() !== index) return null;
-
-    return (
-      <input
-        ref={formulaInputRef}
-        value={formulaInputValue}
-        placeholder={formulaTokens.length === 0 ? "Type a variable or number" : ""}
-        onChange={(event) => {
-          setFormulaInputValue(event.target.value);
-        }}
-        onFocus={() => setFormulaInputFocused(true)}
-        onKeyDown={handleFormulaInputKeyDown}
-        onBlur={handleFormulaInputBlur}
-      />
-    );
   };
 
   return (
@@ -832,7 +568,7 @@ const CustomFormulaBox = ({
               <span className="bf-custom-formula-box__card-content">
                 <span className="bf-custom-formula-box__card-title">{panel.title}</span>
                 <strong className="bf-custom-formula-box__card-value">
-                  {evaluation.value === null ? "Invalid" : currencyFormatter.format(evaluation.value)}
+                  {evaluation.value === null ? "Invalid" : formatCurrencyValue(evaluation.value)}
                 </strong>
               </span>
             </button>
@@ -864,7 +600,7 @@ const CustomFormulaBox = ({
           role="presentation"
           onMouseDown={() => {
             if (iconEditorAnchor) return;
-            setSelectedPanelId("");
+            closeEditor();
           }}
         >
           <aside className="bf-custom-formula-box__editor" onMouseDown={(event) => event.stopPropagation()}>
@@ -874,7 +610,7 @@ const CustomFormulaBox = ({
                 <h3>{selectedPanel.title}</h3>
               </div>
 
-              <button type="button" className="bf-custom-formula-box__icon-button" onClick={() => setSelectedPanelId("")}>
+              <button type="button" className="bf-custom-formula-box__icon-button" onClick={closeEditor}>
                 <CloseRoundedIcon fontSize="small" />
               </button>
             </div>
@@ -911,113 +647,13 @@ const CustomFormulaBox = ({
               </label>
             </div>
 
-            <label className="bf-custom-formula-box__field bf-custom-formula-box__formula-field">
-              <span>Formula</span>
-
-              <div
-                className="bf-custom-formula-box__formula-input"
-                onMouseDown={handleFormulaInputAreaMouseDown}
-                onClick={focusFormulaInput}
-              >
-                {formulaTokens.map((token, tokenIndex) => {
-                  const matchingVariable = variables.find((variable) => variable.key === token.value);
-                  const tokenAccent = token.type === "variable" ? variableAccentByIndex[tokenIndex % variableAccentByIndex.length] : undefined;
-
-                  if (token.type !== "variable") {
-                    return (
-                      <span key={token.id} className="bf-custom-formula-box__formula-token-wrap">
-                        {renderFormulaInput(tokenIndex)}
-
-                        <span
-                          ref={(element) => {
-                            if (element) {
-                              formulaTokenRefs.current.set(token.id, element);
-                            } else {
-                              formulaTokenRefs.current.delete(token.id);
-                            }
-                          }}
-                          className="bf-custom-formula-box__formula-plain-token"
-                        >
-                          {token.value}
-                        </span>
-                      </span>
-                    );
-                  }
-
-                  return (
-                    <span key={token.id} className="bf-custom-formula-box__formula-token-wrap">
-                      {renderFormulaInput(tokenIndex)}
-
-                      <Tooltip
-                        title={matchingVariable ? `${matchingVariable.label}: ${currencyFormatter.format(matchingVariable.value)}` : ""}
-                        disableHoverListener={!matchingVariable}
-                        arrow
-                      >
-                        <button
-                          ref={(element) => {
-                            if (element) {
-                              formulaTokenRefs.current.set(token.id, element);
-                            } else {
-                              formulaTokenRefs.current.delete(token.id);
-                            }
-                          }}
-                          type="button"
-                          className={`bf-custom-formula-box__formula-token ${
-                            tokenAccent ? `bf-custom-formula-box__formula-token--${tokenAccent}` : ""
-                          }`}
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <span className="bf-custom-formula-box__formula-token-text">{token.value}</span>
-
-                          <span
-                            role="button"
-                            tabIndex={0}
-                            className="bf-custom-formula-box__formula-token-remove"
-                            onMouseDown={(event) => event.stopPropagation()}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              removeFormulaToken(token.id);
-                            }}
-                          >
-                            ×
-                          </span>
-                        </button>
-                      </Tooltip>
-                    </span>
-                  );
-                })}
-
-                {renderFormulaInput(formulaTokens.length)}
-              </div>
-
-              {showVariableSuggestions ? (
-                <div className="bf-custom-formula-box__suggestions">
-                  {filteredVariableSuggestions.map((variable, variableIndex) => (
-                    <button
-                      key={`${variable.source}-${variable.key}`}
-                      type="button"
-                      className={`bf-custom-formula-box__suggestion ${
-                        highlightedSuggestionIndex === variableIndex ? "bf-custom-formula-box__suggestion--active" : ""
-                      }`}
-                      onMouseDown={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        addVariableSuggestion(variable);
-                      }}
-                    >
-                      <span className="bf-custom-formula-box__suggestion-info">
-                        <strong>{variable.label}</strong>
-                        <small>{variable.key}</small>
-                      </span>
-
-                      <span className="bf-custom-formula-box__suggestion-value">
-                        {currencyFormatter.format(variable.value)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </label>
+            <AdvancedFormulaTool
+              expression={selectedPanel.expression}
+              variables={variables}
+              result={selectedPanelEvaluation}
+              formatValue={formatCurrencyValue}
+              onChangeExpression={(expression) => updateSelectedPanel({ expression })}
+            />
 
             <Tooltip title={selectedPanelEvaluation?.error ?? ""} disableHoverListener={!selectedPanelEvaluation?.error} arrow>
               <div
@@ -1027,7 +663,7 @@ const CustomFormulaBox = ({
               >
                 <span>Result</span>
                 <strong>
-                  {selectedPanelEvaluation?.value === null ? "Invalid" : currencyFormatter.format(selectedPanelEvaluation?.value ?? 0)}
+                  {selectedPanelEvaluation?.value === null ? "Invalid" : formatCurrencyValue(selectedPanelEvaluation?.value ?? 0)}
                 </strong>
               </div>
             </Tooltip>

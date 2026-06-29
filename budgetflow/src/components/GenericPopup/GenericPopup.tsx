@@ -14,6 +14,7 @@ export type GenericPopupProps = {
   variant?: GenericPopupVariant;
   showCloseButton?: boolean;
   closeOnBackdropClick?: boolean;
+  width?: string;
   onConfirm?: () => void;
   onCancel?: () => void;
   children?: ReactNode;
@@ -28,6 +29,7 @@ const GenericPopup = ({
   variant = "default",
   showCloseButton = true,
   closeOnBackdropClick = true,
+  width = "min(440px, 100%);",
   onConfirm,
   onCancel,
   children,
@@ -40,7 +42,7 @@ const GenericPopup = ({
   };
 
   return (
-    <div className="bf-generic-popup" role="presentation" onMouseDown={handleBackdropMouseDown}>
+    <div className="bf-generic-popup" style={{width: width}} role="presentation" onMouseDown={handleBackdropMouseDown}>
       <section
         className={`bf-generic-popup__panel bf-generic-popup__panel--${variant}`}
         role="dialog"
