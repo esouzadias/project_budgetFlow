@@ -90,6 +90,56 @@ const getUrlLabel = (value: string) => {
   }
 };
 
+const createCompressedImageDataUrl = (file: File, maxSize = 48): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    const image = new Image();
+
+    reader.onerror = () => reject(new Error("Could not read image file."));
+
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        reject(new Error("Invalid image file."));
+        return;
+      }
+
+      image.onload = () => {
+        const ratio = Math.min(maxSize / image.width, maxSize / image.height, 1);
+        const width = Math.max(1, Math.round(image.width * ratio));
+        const height = Math.max(1, Math.round(image.height * ratio));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const context = canvas.getContext("2d");
+
+        if (!context) {
+          reject(new Error("Could not process image."));
+          return;
+        }
+
+        context.clearRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
+
+        const webpDataUrl = canvas.toDataURL("image/webp", 0.55);
+
+        if (webpDataUrl.startsWith("data:image/webp")) {
+          resolve(webpDataUrl);
+          return;
+        }
+
+        resolve(canvas.toDataURL("image/jpeg", 0.55));
+      };
+
+      image.onerror = () => reject(new Error("Could not load image."));
+      image.src = reader.result;
+    };
+
+    reader.readAsDataURL(file);
+  });
+};
+
 export default function IconSelectorMenu({
   open,
   anchorEl,
@@ -205,29 +255,23 @@ export default function IconSelectorMenu({
     onChange({ color: nextColor });
   };
 
-  const handleImageUpload = (file: File | null) => {
-    if (!file) return;
+  const handleImageUpload = async (file: File | null) => {
+  if (!file) return;
 
-    const reader = new FileReader();
+  try {
+    const imageUrl = await createCompressedImageDataUrl(file, 48);
 
-    reader.onload = () => {
-      const imageUrl = reader.result;
+    applyCustomImage(imageUrl);
 
-      if (typeof imageUrl !== "string") return;
-
-      applyCustomImage(imageUrl);
-
-      addRecentUploadedImage({
-        url: imageUrl,
-        label: file.name || "Local image",
-        source: "file",
-      });
-
-      setLocalImageAnchorEl(null);
-    };
-
-    reader.readAsDataURL(file);
-  };
+    addRecentUploadedImage({
+      url: imageUrl,
+      label: file.name || "Local image",
+      source: "file",
+    });
+  } finally {
+    setLocalImageAnchorEl(null);
+  }
+};
 
   const commitImageUrl = () => {
     const cleanUrl = imageUrlDraft.trim();

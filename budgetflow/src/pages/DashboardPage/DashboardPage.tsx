@@ -208,6 +208,7 @@ const DashboardPage = () => {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [hasLoadedBudgetDB, setHasLoadedBudgetDB] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
+  const [periodSelectorPinned, setPeriodSelectorPinned] = useState(false);
 
   const shouldSkipFirstSave = useRef(true);
   const hideSaveStatusTimeout = useRef<number | null>(null);
@@ -308,6 +309,19 @@ const DashboardPage = () => {
       if (hideSaveStatusTimeout.current) {
         window.clearTimeout(hideSaveStatusTimeout.current);
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setPeriodSelectorPinned(window.scrollY > 32);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
     };
   }, []);
 
@@ -493,7 +507,7 @@ const DashboardPage = () => {
   );
 
   return (
-    <main id="dashboard-page">
+    <main id="dashboard-page" className={periodSelectorPinned ? "dashboard-page--period-pinned" : ""}>
       <Navbar />
 
       {saveStatus !== "idle" ? (
@@ -518,15 +532,6 @@ const DashboardPage = () => {
         </div>
       ) : null}
 
-      <section id="customFormulas">
-        <CustomFormulaBox
-          incomeRows={incomeRows}
-          expenseRows={expenseRows}
-          customFormulaPanels={customFormulaPanels}
-          onChangeCustomFormulaPanels={updateCustomFormulaPanels}
-        />
-      </section>
-
       <section className="dashboard-page__period-selector-section">
         <PeriodSelector
           activePeriodKey={activePeriodKey}
@@ -534,6 +539,15 @@ const DashboardPage = () => {
           onPreviousPeriod={goToPreviousPeriod}
           onNextPeriod={goToNextPeriod}
           onCurrentPeriod={goToCurrentPeriod}
+        />
+      </section>
+
+      <section id="customFormulas">
+        <CustomFormulaBox
+          incomeRows={incomeRows}
+          expenseRows={expenseRows}
+          customFormulaPanels={customFormulaPanels}
+          onChangeCustomFormulaPanels={updateCustomFormulaPanels}
         />
       </section>
 

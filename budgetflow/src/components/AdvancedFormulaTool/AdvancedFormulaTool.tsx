@@ -640,7 +640,7 @@ const AdvancedFormulaTool = ({
   return (
     <section className="bf-advanced-formula-tool">
       <div className="bf-advanced-formula-tool__label-row">
-        <span>Formula</span>
+        <span>Variables</span>
       </div>
 
       {searchOpen ? (
@@ -729,6 +729,10 @@ const AdvancedFormulaTool = ({
             )}
           </div>
         </div>
+      </div>
+
+      <div className="bf-advanced-formula-tool__label-row">
+        <span>Formula</span>
       </div>
 
       <div
@@ -830,6 +834,7 @@ const AdvancedFormulaTool = ({
 
         {renderInput(tokens.length)}
       </div>
+      
 
       {showVariableSuggestions ? (
         <div className="bf-advanced-formula-tool__suggestions">

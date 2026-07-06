@@ -6,9 +6,36 @@
   color: var(--bf-text);
 
   .dashboard-page__period-selector-section {
+    position: sticky;
+    top: 0;
+    z-index: 700;
+    width: 100%;
+    min-height: 74px;
     padding: 20px @widthPadding 0;
     display: flex;
-    justify-content: center
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border-bottom: 1px solid transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    transition:
+      min-height 180ms var(--bf-ease),
+      padding 180ms var(--bf-ease),
+      background-color 180ms var(--bf-ease),
+      border-color 180ms var(--bf-ease),
+      box-shadow 180ms var(--bf-ease),
+      backdrop-filter 180ms var(--bf-ease);
+  }
+
+  &.dashboard-page--period-pinned {
+    .dashboard-page__period-selector-section {
+      padding: 10px @widthPadding;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+    }
   }
 
   .dashboard-page__tables-header {
@@ -297,6 +324,12 @@
   #dashboard-page {
     .dashboard-page__period-selector-section {
       padding: 12px 12px 0;
+    }
+
+    &.dashboard-page--period-pinned {
+      .dashboard-page__period-selector-section {
+        padding: 8px 12px;
+      }
     }
 
     .dashboard-page__tables-header {

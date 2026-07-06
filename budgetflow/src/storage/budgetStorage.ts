@@ -103,6 +103,17 @@ const normalizeFormulaAccent = (accent: any): CustomFormulaPanel["accent"] => {
   return "blue";
 };
 
+const normalizeIconImageUrl = (value: any) => {
+  if (typeof value !== "string") return null;
+
+  const cleanValue = value.trim();
+  if (!cleanValue) return null;
+
+  if (!cleanValue.startsWith("data:image/")) return cleanValue;
+
+  return cleanValue.length <= 12000 ? cleanValue : null;
+};
+
 const normalizeRow = (row: any): RegistryRow => ({
   id: row.id ?? crypto.randomUUID(),
   label: row.label ?? "",
@@ -110,7 +121,7 @@ const normalizeRow = (row: any): RegistryRow => ({
   prevAmount: typeof row.prevAmount === "number" ? row.prevAmount : null,
   note: row.note ?? "",
   iconId: row.iconId ?? "other",
-  iconImageUrl: row.iconImageUrl ?? null,
+  iconImageUrl: normalizeIconImageUrl(row.iconImageUrl),
   color: row.color ?? "#1a73e8",
   categories: Array.isArray(row.categories) ? row.categories : [],
   recurring: Boolean(row.recurring),
@@ -130,7 +141,7 @@ const normalizeFormulaPanel = (panel: any): CustomFormulaPanel => ({
   expression: panel.expression ?? "0",
   accent: normalizeFormulaAccent(panel.accent),
   iconId: panel.iconId ?? "other",
-  iconImageUrl: panel.iconImageUrl ?? null,
+  iconImageUrl: normalizeIconImageUrl(panel.iconImageUrl),
   color: panel.color ?? "#1a73e8",
 });
 
