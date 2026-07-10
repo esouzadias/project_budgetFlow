@@ -1,4 +1,3 @@
-// src/pages/Savings/Savings.types.ts
 import type { IconId } from '../../components/IconSelectorMenu/IconSelectorMenu.types';
 
 export type SavingsTransaction = {
@@ -12,7 +11,9 @@ export type SavingItem = {
   id: string;
   name: string;
   iconId: IconId;
+  iconImageUrl: string | null;
   color: string;
   goalAmount: number | null;
+  recurring: boolean;
   transactions: SavingsTransaction[];
 };

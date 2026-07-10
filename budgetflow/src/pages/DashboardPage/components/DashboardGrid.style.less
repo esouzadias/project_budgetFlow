@@ -1,7 +1,7 @@
 @import "../../../styles/Globals.less";
 
 #dashboard-grid-container {
-  padding: 20px @widthPadding;
+  //padding: 0px @widthPadding;
 
   #dashboard-grid-content {
     display: flex;
@@ -47,6 +47,18 @@
   .MuiTable-root {
     min-width: 880px;
   }
+}
+
+.bf-dashboard-grid__block--bare {
+
+  min-height: 0;
+
+  .bf-dashboard-grid__mobile-order-controls {
+
+    display: none;
+
+  }
+
 }
 
 .bf-dashboard-grid__block--span-6 {

@@ -1,6 +1,7 @@
 import "./DashboardPage.style.less";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
@@ -14,9 +15,11 @@ import CustomFormulaBox from "../../components/CustomFormulaBox/CustomFormulaBox
 import GenericPopup from "../../components/GenericPopup/GenericPopup";
 import GenericOptionsPopup, { type GenericOptionsPopupOption } from "../../components/GenericOptionsPopup/GenericOptionsPopup";
 import PeriodSelector from "../../components/PeriodSelector/PeriodSelector";
+import Savings from "../Savings/Savings";
 import { loadLocalBudgetDB, saveLocalBudgetDB } from "../../storage/budgetStorage";
 
 import type { RegistryRow } from "../../components/RegistryTable/RegistryTable.types";
+import type { SavingItem } from "../Savings/Savings.type";
 import type {
   BudgetTable,
   BudgetTableType,
@@ -26,6 +29,12 @@ import type {
   MonthKey,
   MonthSnapshot,
 } from "./DashboardPage.types";
+
+type UndoSnapshot = {
+  activePeriodKey: MonthKey;
+  periods: Record<MonthKey, MonthSnapshot>;
+  currency: string;
+};
 
 const createId = () => crypto.randomUUID();
 
@@ -78,13 +87,8 @@ const createEmptyPeriod = (): MonthSnapshot => ({
   ],
   customFormulaPanels: createDefaultFormulaPanels(),
   charts: [],
+  savings: [],
 });
-
-type UndoSnapshot = {
-  activePeriodKey: MonthKey;
-  periods: Record<MonthKey, MonthSnapshot>;
-  currency: string;
-};
 
 const tableCreationOptions: GenericOptionsPopupOption[] = [
   {
@@ -174,6 +178,16 @@ const cloneCharts = (charts: DashboardChart[]): DashboardChart[] => {
   }));
 };
 
+const cloneRecurringSavings = (items: SavingItem[]): SavingItem[] => {
+  return items
+    .filter((item) => item.recurring)
+    .map((item) => ({
+      ...item,
+      id: createId(),
+      transactions: [],
+    }));
+};
+
 const createPeriodFromPreviousPeriod = (previousPeriod?: MonthSnapshot | null): MonthSnapshot => {
   if (!previousPeriod) return createEmptyPeriod();
 
@@ -188,6 +202,7 @@ const createPeriodFromPreviousPeriod = (previousPeriod?: MonthSnapshot | null): 
         ? cloneFormulaPanels(previousPeriod.customFormulaPanels)
         : createDefaultFormulaPanels(),
     charts: cloneCharts(previousPeriod.charts),
+    savings: cloneRecurringSavings(previousPeriod.savings ?? []),
   };
 };
 
@@ -217,6 +232,7 @@ const DashboardPage = () => {
   const activePeriod = periods[activePeriodKey] ?? createEmptyPeriod();
   const tables = activePeriod.tables;
   const customFormulaPanels = activePeriod.customFormulaPanels;
+  const savings = activePeriod.savings ?? [];
   const previousPeriod = periods[getPreviousMonthKey(activePeriodKey)] ?? null;
 
   const visibleTables = useMemo(
@@ -265,23 +281,26 @@ const DashboardPage = () => {
     setSaveStatus("saving");
   };
 
-  const changeActivePeriod = useCallback((nextPeriodKey: MonthKey) => {
-    captureUndoSnapshot();
+  const changeActivePeriod = useCallback(
+    (nextPeriodKey: MonthKey) => {
+      captureUndoSnapshot();
 
-    setPeriods((currentPeriods) => {
-      if (currentPeriods[nextPeriodKey]) return currentPeriods;
+      setPeriods((currentPeriods) => {
+        if (currentPeriods[nextPeriodKey]) return currentPeriods;
 
-      const previousPeriodKey = getPreviousMonthKey(nextPeriodKey);
-      const previousPeriodForTemplate = currentPeriods[previousPeriodKey] ?? currentPeriods[activePeriodKey] ?? createEmptyPeriod();
+        const previousPeriodKey = getPreviousMonthKey(nextPeriodKey);
+        const previousPeriodForTemplate = currentPeriods[previousPeriodKey] ?? currentPeriods[activePeriodKey] ?? createEmptyPeriod();
 
-      return {
-        ...currentPeriods,
-        [nextPeriodKey]: createPeriodFromPreviousPeriod(previousPeriodForTemplate),
-      };
-    });
+        return {
+          ...currentPeriods,
+          [nextPeriodKey]: createPeriodFromPreviousPeriod(previousPeriodForTemplate),
+        };
+      });
 
-    setActivePeriodKey(nextPeriodKey);
-  }, [activePeriodKey, captureUndoSnapshot]);
+      setActivePeriodKey(nextPeriodKey);
+    },
+    [activePeriodKey, captureUndoSnapshot],
+  );
 
   const goToPreviousPeriod = () => {
     changeActivePeriod(shiftMonthKey(activePeriodKey, -1));
@@ -325,36 +344,42 @@ const DashboardPage = () => {
     };
   }, []);
 
-  const updateActivePeriod = useCallback((patch: Partial<MonthSnapshot>) => {
-    setPeriods((currentPeriods) => {
-      const currentPeriod = currentPeriods[activePeriodKey] ?? createEmptyPeriod();
+  const updateActivePeriod = useCallback(
+    (patch: Partial<MonthSnapshot>) => {
+      setPeriods((currentPeriods) => {
+        const currentPeriod = currentPeriods[activePeriodKey] ?? createEmptyPeriod();
 
-      return {
-        ...currentPeriods,
-        [activePeriodKey]: {
-          ...currentPeriod,
-          ...patch,
-        },
-      };
-    });
-  }, [activePeriodKey]);
+        return {
+          ...currentPeriods,
+          [activePeriodKey]: {
+            ...currentPeriod,
+            ...patch,
+          },
+        };
+      });
+    },
+    [activePeriodKey],
+  );
 
-  const updateTableRows = useCallback((tableId: string, rows: RegistryRow[]) => {
-    captureUndoSnapshot();
+  const updateTableRows = useCallback(
+    (tableId: string, rows: RegistryRow[]) => {
+      captureUndoSnapshot();
 
-    setPeriods((currentPeriods) => {
-      const currentPeriod = currentPeriods[activePeriodKey] ?? createEmptyPeriod();
-      const nextTables = currentPeriod.tables.map((table) => (table.id === tableId ? { ...table, rows } : table));
+      setPeriods((currentPeriods) => {
+        const currentPeriod = currentPeriods[activePeriodKey] ?? createEmptyPeriod();
+        const nextTables = currentPeriod.tables.map((table) => (table.id === tableId ? { ...table, rows } : table));
 
-      return {
-        ...currentPeriods,
-        [activePeriodKey]: {
-          ...currentPeriod,
-          tables: nextTables,
-        },
-      };
-    });
-  }, [activePeriodKey, captureUndoSnapshot]);
+        return {
+          ...currentPeriods,
+          [activePeriodKey]: {
+            ...currentPeriod,
+            tables: nextTables,
+          },
+        };
+      });
+    },
+    [activePeriodKey, captureUndoSnapshot],
+  );
 
   const openTableOptionsPopup = (event: MouseEvent<HTMLButtonElement>) => {
     setTableOptionsAnchor(event.currentTarget);
@@ -432,10 +457,21 @@ const DashboardPage = () => {
     setTableIdPendingDelete(null);
   };
 
-  const updateCustomFormulaPanels = useCallback((panels: CustomFormulaPanel[]) => {
-    captureUndoSnapshot();
-    updateActivePeriod({ customFormulaPanels: panels });
-  }, [updateActivePeriod, captureUndoSnapshot]);
+  const updateCustomFormulaPanels = useCallback(
+    (panels: CustomFormulaPanel[]) => {
+      captureUndoSnapshot();
+      updateActivePeriod({ customFormulaPanels: panels });
+    },
+    [updateActivePeriod, captureUndoSnapshot],
+  );
+
+  const updateSavings = useCallback(
+    (nextSavings: SavingItem[]) => {
+      captureUndoSnapshot();
+      updateActivePeriod({ savings: nextSavings });
+    },
+    [updateActivePeriod, captureUndoSnapshot],
+  );
 
   useEffect(() => {
     if (!hasLoadedBudgetDB) return;
@@ -483,10 +519,10 @@ const DashboardPage = () => {
         title: table.name,
         defaultSize: getDashboardBlockSize(index, visibleTables.length),
         content: (
-          <div className="dashboard-page__table-block">
+          <div className="dbp-table-block">
             <button
               type="button"
-              className="dashboard-page__table-delete-button"
+              className="dbp-table-block__delete-button"
               onClick={() => requestDeleteTable(table.id)}
               aria-label={`Delete ${table.name}`}
             >
@@ -507,32 +543,32 @@ const DashboardPage = () => {
   );
 
   return (
-    <main id="dashboard-page" className={periodSelectorPinned ? "dashboard-page--period-pinned" : ""}>
+    <main id="dashboard-page" className={periodSelectorPinned ? "dbp--period-pinned" : ""}>
       <Navbar />
 
       {saveStatus !== "idle" ? (
-        <div className={`dashboard-page__save-indicator dashboard-page__save-indicator--${saveStatus}`}>
-          <span className="dashboard-page__save-icon-wrap">
+        <div className={`dbp-save dbp-save--${saveStatus}`}>
+          <span className="dbp-save__icon">
             {saveStatus === "saving" ? <SyncRoundedIcon /> : null}
             {saveStatus === "saved" ? <CheckCircleRoundedIcon /> : null}
             {saveStatus === "error" ? <ErrorOutlineRoundedIcon /> : null}
           </span>
 
-          <span className="dashboard-page__save-label">
+          <span className="dbp-save__label">
             {saveStatus === "saving" ? "Saving" : null}
             {saveStatus === "saved" ? "Saved" : null}
             {saveStatus === "error" ? "Save failed" : null}
           </span>
 
           {saveStatus === "saved" && canUndo ? (
-            <button type="button" className="dashboard-page__undo-button" onClick={undoLastChange}>
+            <button type="button" className="dbp-save__undo-button" onClick={undoLastChange}>
               Undo
             </button>
           ) : null}
         </div>
       ) : null}
 
-      <section className="dashboard-page__period-selector-section">
+      <section id="dashboard-page__period-selector">
         <PeriodSelector
           activePeriodKey={activePeriodKey}
           locale="en-US"
@@ -542,39 +578,47 @@ const DashboardPage = () => {
         />
       </section>
 
-      <section id="customFormulas">
+      <section id="dashboard-page__main-content">
         <CustomFormulaBox
           incomeRows={incomeRows}
           expenseRows={expenseRows}
           customFormulaPanels={customFormulaPanels}
           onChangeCustomFormulaPanels={updateCustomFormulaPanels}
         />
+
+        <section id="dashboard-page__tables">
+          <section id="dbp__tables_header">
+            <div id="dbp__tables_heading">
+              <p id="dbp__tables_eyebrow">Tables</p>
+              <h2 id="dbp__tables_title">My Tables</h2>
+            </div>
+
+            <button type="button" id="dbp__add_table_button" onClick={openTableOptionsPopup}>
+              <AddRoundedIcon fontSize="small" />
+              <span>Add new table</span>
+            </button>
+          </section>
+
+          <GenericOptionsPopup
+            open={Boolean(tableOptionsAnchor)}
+            anchorEl={tableOptionsAnchor}
+            title="Add new table"
+            options={tableCreationOptions}
+            onSelect={handleSelectTableOption}
+            onClose={closeTableOptionsPopup}
+          />
+
+          <DashboardGrid blocks={dashboardBlocks} />
+        </section>
+
+        <section id="dashboard-page__savings">
+          <div id="dbp_savings__section-heading">
+            <p className="dbp_savings__tables-eyebrow">Savings</p>
+            <h2 className="dbp_savings__tables-title">My Savings</h2>
+          </div>
+          <Savings items={savings} onChange={updateSavings} />
+        </section>
       </section>
-
-      <section id="tables" className="dashboard-page__tables-header">
-        <div>
-          <p className="dashboard-page__tables-eyebrow">Tables</p>
-          <h2 className="dashboard-page__tables-title">Budget tables</h2>
-        </div>
-
-        <button type="button" className="dashboard-page__add-table-button" onClick={openTableOptionsPopup}>
-          <AddRoundedIcon fontSize="small" />
-          <span>Add new table</span>
-        </button>
-      </section>
-
-      <section id="charts"></section>
-
-      <GenericOptionsPopup
-        open={Boolean(tableOptionsAnchor)}
-        anchorEl={tableOptionsAnchor}
-        title="Add new table"
-        options={tableCreationOptions}
-        onSelect={handleSelectTableOption}
-        onClose={closeTableOptionsPopup}
-      />
-
-      <DashboardGrid blocks={dashboardBlocks} />
 
       <GenericPopup
         open={Boolean(tablePendingDelete)}

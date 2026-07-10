@@ -244,10 +244,34 @@ const CustomFormulaBox = ({
       .reduce((total, variable) => total + variable.value, 0);
 
     const systemVariables: FormulaVariable[] = [
-      { key: "total_income", label: "Total Income", value: totalIncome, source: "system", color: COLOR_PRESETS[13] ?? "#34a853" },
-      { key: "total_expenses", label: "Total Expenses", value: totalExpenses, source: "system", color: COLOR_PRESETS[7] ?? "#ea4335" },
-      { key: "total_savings", label: "Total Savings", value: totalSavings, source: "system", color: COLOR_PRESETS[0] ?? "#1a73e8" },
-      { key: "balance", label: "Balance", value: totalIncome - totalExpenses, source: "system", color: COLOR_PRESETS[0] ?? "#1a73e8" },
+      {
+        key: "total_income",
+        label: "Total Income",
+        value: totalIncome,
+        source: "system",
+        color: COLOR_PRESETS[13] ?? "#34a853",
+      },
+      {
+        key: "total_expenses",
+        label: "Total Expenses",
+        value: totalExpenses,
+        source: "system",
+        color: COLOR_PRESETS[7] ?? "#ea4335",
+      },
+      {
+        key: "total_savings",
+        label: "Total Savings",
+        value: totalSavings,
+        source: "system",
+        color: COLOR_PRESETS[0] ?? "#1a73e8",
+      },
+      {
+        key: "balance",
+        label: "Balance",
+        value: totalIncome - totalExpenses,
+        source: "system",
+        color: COLOR_PRESETS[0] ?? "#1a73e8",
+      },
     ];
 
     const formulaVariables: FormulaVariable[] = [];
@@ -455,7 +479,7 @@ const CustomFormulaBox = ({
 
   const renderPanelIcon = (panel: CustomFormulaPanel, fontSize: "small" | "medium" = "small") => {
     if (panel.iconImageUrl) {
-      return <img className="bf-custom-formula-box__icon-image" src={panel.iconImageUrl} alt="" />;
+      return <img className="cfb-card__icon-image" src={panel.iconImageUrl} alt="" />;
     }
 
     const iconOption =
@@ -467,15 +491,13 @@ const CustomFormulaBox = ({
   };
 
   return (
-    <section className="bf-custom-formula-box">
-      <div className="bf-custom-formula-box__toolbar">
-        <div>
-          <p className="bf-custom-formula-box__eyebrow">Custom panels</p>
-          <h2 className="bf-custom-formula-box__title">Formula dashboard</h2>
-        </div>
+    <main id="custom-formula-box">
+      <div id="cfb__toolbar">
+        <p id="cfb__eyebrow">Custom panels</p>
+        <h2 id="cfb__title">Formula dashboard</h2>
       </div>
 
-      <div className="bf-custom-formula-box__cards">
+      <div id="custom-formula-box__cards">
         {panels.map((panel, panelIndex) => {
           const isFirstPanel = panelIndex === 0;
           const isLastPanel = panelIndex === panels.length - 1;
@@ -493,21 +515,19 @@ const CustomFormulaBox = ({
               }}
               type="button"
               draggable
-              className={`bf-custom-formula-box__card bf-custom-formula-box__card--${panel.accent} ${
-                draggedPanelId === panel.id ? "bf-custom-formula-box__card--dragging" : ""
-              }`}
+              className={`bf-bubble-surface cfb-card cfb-card--${panel.accent} ${draggedPanelId === panel.id ? "cfb-card--dragging" : ""}`}
               onClick={() => openPanelEditor(panel)}
               onDragStart={() => handleDragStart(panel.id)}
               onDragOver={(event) => handleDragOver(event, panel.id)}
               onDragEnd={handleDragEnd}
             >
-              <span className="bf-custom-formula-box__card-drag-pill" aria-hidden="true" />
+              <span className="cfb-card__drag-pill" aria-hidden="true" />
 
               {panels.length > 1 ? (
                 <span
                   role="button"
                   tabIndex={0}
-                  className="bf-custom-formula-box__card-delete-button"
+                  className="bf-delete-icon bf-delete-icon--floating cfb-card__delete-button"
                   onClick={(event) => {
                     event.stopPropagation();
                     requestDeletePanel(panel.id);
@@ -525,12 +545,12 @@ const CustomFormulaBox = ({
                 </span>
               ) : null}
 
-              <span className="bf-custom-formula-box__mobile-order-controls" aria-label={`${panel.title} order controls`}>
+              <span className="cfb-card__mobile-order-controls" aria-label={`${panel.title} order controls`}>
                 <span
                   role="button"
                   tabIndex={0}
-                  className={`bf-custom-formula-box__mobile-order-button ${
-                    isFirstPanel ? "bf-custom-formula-box__mobile-order-button--disabled" : ""
+                  className={`cfb-card__mobile-order-button ${
+                    isFirstPanel ? "cfb-card__mobile-order-button--disabled" : ""
                   }`}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -543,8 +563,8 @@ const CustomFormulaBox = ({
                 <span
                   role="button"
                   tabIndex={0}
-                  className={`bf-custom-formula-box__mobile-order-button ${
-                    isLastPanel ? "bf-custom-formula-box__mobile-order-button--disabled" : ""
+                  className={`cfb-card__mobile-order-button ${
+                    isLastPanel ? "cfb-card__mobile-order-button--disabled" : ""
                   }`}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -556,7 +576,7 @@ const CustomFormulaBox = ({
               </span>
 
               <span
-                className="bf-custom-formula-box__card-icon"
+                className="cfb-card__icon"
                 style={{
                   color: panel.color,
                   background: `color-mix(in srgb, ${panel.color} 14%, transparent)`,
@@ -565,9 +585,9 @@ const CustomFormulaBox = ({
                 {renderPanelIcon(panel)}
               </span>
 
-              <span className="bf-custom-formula-box__card-content">
-                <span className="bf-custom-formula-box__card-title">{panel.title}</span>
-                <strong className="bf-custom-formula-box__card-value">
+              <span className="cfb-card__content">
+                <span className="cfb-card__title">{panel.title}</span>
+                <strong className="cfb-card__value">
                   {evaluation.value === null ? "Invalid" : formatCurrencyValue(evaluation.value)}
                 </strong>
               </span>
@@ -575,8 +595,8 @@ const CustomFormulaBox = ({
           );
         })}
 
-        <button type="button" className="bf-custom-formula-box__empty-card" onClick={addPanel}>
-          <span className="bf-custom-formula-box__empty-card-icon">
+        <button type="button" id="cfb__empty_card" onClick={addPanel}>
+          <span id="cfb__empty_card_icon">
             <AddRoundedIcon fontSize="large" />
           </span>
           <span>Add formula</span>
@@ -596,32 +616,32 @@ const CustomFormulaBox = ({
 
       {selectedPanel ? (
         <div
-          className="bf-custom-formula-box__overlay"
+          id="cfb__overlay"
           role="presentation"
           onMouseDown={() => {
             if (iconEditorAnchor) return;
             closeEditor();
           }}
         >
-          <aside className="bf-custom-formula-box__editor" onMouseDown={(event) => event.stopPropagation()}>
-            <div className="bf-custom-formula-box__editor-header">
+          <aside id="cfb__editor" onMouseDown={(event) => event.stopPropagation()}>
+            <div id="cfb__editor_header">
               <div>
-                <p className="bf-custom-formula-box__eyebrow">Edit card</p>
-                <h3>{selectedPanel.title}</h3>
+                <p id="cfb__editor_eyebrow">Edit card</p>
+                <h3 id="cfb__editor_title">{selectedPanel.title}</h3>
               </div>
 
-              <button type="button" className="bf-custom-formula-box__icon-button" onClick={closeEditor}>
+              <button type="button" id="cfb__editor_close_button" onClick={closeEditor}>
                 <CloseRoundedIcon fontSize="small" />
               </button>
             </div>
 
-            <div className="bf-custom-formula-box__name-row">
-              <label className="bf-custom-formula-box__field bf-custom-formula-box__icon-field">
-                <span>Icon</span>
+            <div id="cfb__editor_name_row">
+              <label className="cfb-field cfb-field--icon">
+                <span className="cfb-field__label">Icon</span>
 
                 <button
                   type="button"
-                  className="bf-custom-formula-box__selected-icon"
+                  id="cfb__selected_icon_button"
                   style={{
                     color: selectedPanel.color,
                     background: `color-mix(in srgb, ${selectedPanel.color} 14%, transparent)`,
@@ -634,15 +654,15 @@ const CustomFormulaBox = ({
                   }}
                 >
                   {selectedPanel.iconImageUrl ? (
-                    <img className="bf-custom-formula-box__selected-icon-image" src={selectedPanel.iconImageUrl} alt="" />
+                    <img id="cfb__selected_icon_image" src={selectedPanel.iconImageUrl} alt="" />
                   ) : (
                     selectedIconOption.render({ fontSize: "medium" })
                   )}
                 </button>
               </label>
 
-              <label className="bf-custom-formula-box__field bf-custom-formula-box__name-field">
-                <span>Name</span>
+              <label className="cfb-field cfb-field--name">
+                <span className="cfb-field__label">Name</span>
                 <input value={selectedPanel.title} onChange={(event) => updateSelectedPanel({ title: event.target.value })} />
               </label>
             </div>
@@ -657,12 +677,14 @@ const CustomFormulaBox = ({
 
             <Tooltip title={selectedPanelEvaluation?.error ?? ""} disableHoverListener={!selectedPanelEvaluation?.error} arrow>
               <div
-                className={`bf-custom-formula-box__result-preview ${
-                  selectedPanelEvaluation?.error ? "bf-custom-formula-box__result-preview--invalid" : ""
-                }`}
+                id="cfb__result_preview"
+                className={`bf-preview ${selectedPanelEvaluation?.error ? "bf-preview--invalid" : ""}`}
               >
-                <span>Result</span>
-                <strong>
+                <span id="cfb__result_label" className="bf-preview__label">
+                  Result
+                </span>
+
+                <strong id="cfb__result_value" className="bf-preview__value">
                   {selectedPanelEvaluation?.value === null ? "Invalid" : formatCurrencyValue(selectedPanelEvaluation?.value ?? 0)}
                 </strong>
               </div>
@@ -686,7 +708,7 @@ const CustomFormulaBox = ({
           />
         </div>
       ) : null}
-    </section>
+    </main>
   );
 };
 

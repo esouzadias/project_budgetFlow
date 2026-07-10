@@ -1,7 +1,7 @@
 /* src/styles/Globals.less
-   ===========================================
-   Globals.less — BudgetFlow Design System
-   =========================================== */
+  ===========================================
+  Globals.less — BudgetFlow Design System
+  =========================================== */
 
 /* VARIABLES (legacy - keep) */
 @primary: #2563eb;
@@ -26,10 +26,10 @@
 :root {
   font-family: @font-family;
 
-  /* Radii */
+  /* Radius */
   --bf-radius-sm: 10px;
-  --bf-radius-md: 10px;
-  --bf-radius-lg: 10px;
+  --bf-radius-md: 15px;
+  --bf-radius-lg: 20px;
   --bf-radius-pill: 50px;
 
   /* Brand */
@@ -56,6 +56,7 @@
   --bf-shadow-1: 0 8px 22px rgba(15, 23, 42, 0.08);
   --bf-shadow-2: 0 16px 42px rgba(15, 23, 42, 0.12);
   --bf-shadow-3: 0 22px 70px rgba(15, 23, 42, 0.16);
+  --bf-shadow-4: 0 2px 10px rgba(15, 23, 42, 0.20);
 
   /* Motion */
   --bf-ease: cubic-bezier(.2,.8,.2,1);
@@ -69,7 +70,7 @@
 }
 
 /* ===========================================
-   Dark theme (toggle via <html data-bf-theme="dark">)
+  Dark theme (toggle via <html data-bf-theme="dark">)
    =========================================== */
 :root[data-bf-theme="dark"] {
   /* Base */
@@ -107,7 +108,7 @@ body {
 }
 
 /* ===========================================
-   Core bubble / glass card
+  Core bubble / glass card
    =========================================== */
 .bf-bubble-surface {
   position: relative;
@@ -116,7 +117,7 @@ body {
   background: var(--bf-surface-bg);
   backdrop-filter: blur(var(--bf-surface-blur));
   -webkit-backdrop-filter: blur(var(--bf-surface-blur));
-  box-shadow: var(--bf-shadow-1), inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  box-shadow: var(--bf-shadow-4), inset 0 1px 0 rgba(255, 255, 255, 0.75);
   transition:
     transform var(--bf-fast) var(--bf-ease),
     box-shadow var(--bf-fast) var(--bf-ease),
@@ -126,8 +127,8 @@ body {
 }
 
 .bf-bubble-surface:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--bf-shadow-2);
+  // transform: translateY(-2px);
+  // box-shadow: var(--bf-shadow-2);
   border-color: rgba(26, 115, 232, 0.22);
 }
 
@@ -155,7 +156,7 @@ body {
 }
 
 /* ===========================================
-   Surface variants
+  Surface variants
    =========================================== */
 .bf-bubble-surface--data {
   --bf-surface-bg: rgba(255, 255, 255, 0.92);
@@ -176,7 +177,7 @@ body {
 }
 
 /* ===========================================
-   Buttons / Pills / Cells
+  Buttons / Pills / Cells
    =========================================== */
 .bf-icon-btn {
   width: 30px;
@@ -204,6 +205,97 @@ body {
 :root[data-bf-theme="dark"] .bf-icon-btn:hover {
   background: rgba(226, 232, 240, 0.06);
   border-color: rgba(226, 232, 240, 0.14);
+}
+
+/* ===========================================
+  Delete icon
+   =========================================== */
+.bf-delete-icon,
+.MuiIconButton-root.bf-delete-icon {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  padding: 0 !important;
+  border: 1px solid color-mix(in srgb, var(--bf-danger) 38%, var(--bf-border)) !important;
+  border-radius: var(--bf-radius-pill) !important;
+  color: var(--bf-danger) !important;
+  background: color-mix(in srgb, var(--bf-danger) 8%, var(--bf-surface-bg)) !important;
+  box-shadow: var(--bf-shadow-1);
+  cursor: pointer;
+  display: inline-grid !important;
+  place-items: center !important;
+  transition:
+    opacity var(--bf-fast) var(--bf-ease),
+    transform var(--bf-fast) var(--bf-ease),
+    background-color var(--bf-fast) var(--bf-ease),
+    border-color var(--bf-fast) var(--bf-ease);
+}
+
+.bf-delete-icon svg,
+.MuiIconButton-root.bf-delete-icon svg {
+  color: currentColor;
+}
+
+.bf-delete-icon:hover,
+.MuiIconButton-root.bf-delete-icon:hover {
+  border-color: color-mix(in srgb, var(--bf-danger) 68%, var(--bf-border)) !important;
+  background: color-mix(in srgb, var(--bf-danger) 14%, var(--bf-surface-bg)) !important;
+}
+
+.bf-delete-icon--floating {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 6;
+  opacity: 0;
+  transform: translateY(-3px) scale(0.96);
+  pointer-events: none;
+}
+
+.bf-delete-icon--floating:focus-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.bf-delete-icon--visible,
+.bf-delete-icon--floating.bf-delete-icon--visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* ===========================================
+  Preview
+   =========================================== */
+.bf-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+  padding: 20px;
+  border-radius: var(--bf-radius-lg);
+  background: color-mix(in srgb, var(--bf-primary) 7%, transparent);
+}
+
+.bf-preview__label {
+  color: var(--bf-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.bf-preview__value {
+  color: var(--bf-primary);
+  font-size: 26px;
+}
+
+.bf-preview--invalid {
+  background: color-mix(in srgb, var(--bf-danger) 9%, transparent);
+}
+
+.bf-preview--invalid .bf-preview__value {
+  color: var(--bf-danger);
 }
 
 .bf-pill {

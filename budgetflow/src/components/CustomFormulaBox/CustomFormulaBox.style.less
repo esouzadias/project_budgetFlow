@@ -1,272 +1,206 @@
 @import "../../styles/Globals.less";
 
-.bf-custom-formula-box {
-  padding: 20px @widthPadding 0;
-
-  &__toolbar {
+#custom-formula-box {
+  #cfb__toolbar {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
-  }
+    flex-direction: column;
+    align-items: flex-start;
 
-  &__eyebrow {
-    margin: 0 0 4px;
-    color: var(--bf-muted);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  &__title,
-  &__editor h3 {
-    margin: 0;
-    color: var(--bf-text);
-  }
-
-  &__title {
-    font-size: 22px;
-    font-weight: 900;
-  }
-
-  &__editor h3 {
-    font-size: 22px;
-    font-weight: 900;
-  }
-
-  &__add-button,
-  &__icon-button {
-    border: 1px solid var(--bf-border);
-    border-radius: var(--bf-radius-pill);
-    color: var(--bf-text);
-    background: var(--bf-surface-bg);
-    cursor: pointer;
-    transition:
-      transform var(--bf-fast) var(--bf-ease),
-      border-color var(--bf-fast) var(--bf-ease),
-      background-color var(--bf-fast) var(--bf-ease),
-      opacity var(--bf-fast) var(--bf-ease);
-  }
-
-  &__add-button {
-    height: 38px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0 14px;
-    font-weight: 800;
-  }
-
-  &__icon-button {
-    width: 38px;
-    height: 38px;
-    display: inline-grid;
-    place-items: center;
-  }
-
-  &__card-delete-button {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 6;
-    width: 34px;
-    height: 34px;
-    display: inline-grid;
-    place-items: center;
-    border: 1px solid color-mix(in srgb, var(--bf-danger) 38%, var(--bf-border));
-    border-radius: var(--bf-radius-pill);
-    color: var(--bf-danger);
-    background: color-mix(in srgb, var(--bf-danger) 8%, var(--bf-surface-bg));
-    box-shadow: var(--bf-shadow-1);
-    cursor: pointer;
-    opacity: 0;
-    transform: translateY(-3px) scale(0.96);
-    pointer-events: none;
-    transition:
-      opacity var(--bf-fast) var(--bf-ease),
-      transform var(--bf-fast) var(--bf-ease),
-      background-color var(--bf-fast) var(--bf-ease),
-      border-color var(--bf-fast) var(--bf-ease);
-
-    &:focus-visible {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-      pointer-events: auto;
+    #cfb__eyebrow {
+      margin: 0 0 4px;
+      color: var(--bf-muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
-    &:hover {
-      border-color: color-mix(in srgb, var(--bf-danger) 68%, var(--bf-border));
-      background: color-mix(in srgb, var(--bf-danger) 14%, var(--bf-surface-bg));
+    #cfb__title {
+      margin: 0;
+      color: var(--bf-text);
+      font-size: 22px;
+      font-weight: 900;
     }
   }
 
-  &__cards {
+  #custom-formula-box__cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, 260px);
     gap: 24px;
     align-items: stretch;
-  }
 
-  &__card,
-  &__empty-card {
-    width: 260px;
-    min-height: 92px;
-    border-radius: var(--bf-radius-lg);
-    text-align: left;
-    cursor: pointer;
-  }
+    .cfb-card,
+    #cfb__empty_card {
+      width: 260px;
+      min-height: 92px;
+      border-radius: var(--bf-radius-md) !important;
+      text-align: left;
+      cursor: pointer;
+    }
 
-  &__card {
-    position: relative;
-    display: grid;
-    grid-template-columns: 44px minmax(0, 1fr);
-    gap: 10px;
-    align-items: center;
-    padding: 24px 14px 14px;
-    border: 1px solid var(--bf-border);
-    background: var(--bf-surface-bg);
-    box-shadow: var(--bf-shadow-1);
-    transition:
-      transform 260ms ease-in-out,
-      border-color var(--bf-fast) var(--bf-ease),
-      box-shadow var(--bf-fast) var(--bf-ease),
-      opacity var(--bf-fast) ease;
-    will-change: transform;
+    .cfb-card {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      padding: 24px 14px 14px;
+      font: inherit;
+      border-radius: var(--bf-radius-md) !important;
+      transition:
+        grid-column 260ms ease-in-out,
+        transform 260ms ease-in-out,
+        opacity var(--bf-fast) ease;
+      will-change: transform;
 
-    &:hover {
-      transform: translateY(-2px);
-      border-color: color-mix(in srgb, var(--bf-primary) 28%, var(--bf-border));
-      box-shadow: var(--bf-shadow-2);
+      &:hover {
+        .bf-delete-icon--floating {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          pointer-events: auto;
+        }
 
-      .bf-custom-formula-box__card-delete-button {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        pointer-events: auto;
+        .cfb-card__drag-pill {
+          width: 96px;
+          background: color-mix(in srgb, var(--bf-muted) 52%, transparent);
+        }
       }
 
-      .bf-custom-formula-box__card-drag-pill {
-        width: 96px;
-        background: color-mix(in srgb, var(--bf-muted) 52%, transparent);
+      &:focus-visible {
+        .bf-delete-icon--floating {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          pointer-events: auto;
+        }
+      }
+
+      &--dragging {
+        opacity: 0.45;
+        transform: scale(0.98);
+      }
+
+      &__drag-pill {
+        position: absolute;
+        top: 7px;
+        left: 50%;
+        width: 84px;
+        height: 5px;
+        border-radius: var(--bf-radius-pill);
+        background: color-mix(in srgb, var(--bf-muted) 34%, transparent);
+        transform: translateX(-50%);
+        cursor: grab;
+        transition:
+          width var(--bf-fast) var(--bf-ease),
+          background-color var(--bf-fast) var(--bf-ease),
+          opacity var(--bf-fast) var(--bf-ease);
+      }
+
+      &__mobile-order-controls {
+        display: none;
+      }
+
+      &__mobile-order-button {
+        width: 34px;
+        height: 34px;
+        display: inline-grid;
+        place-items: center;
+        border: 1px solid var(--bf-border);
+        border-radius: var(--bf-radius-pill);
+        color: var(--bf-text);
+        background: var(--bf-surface-bg);
+        box-shadow: var(--bf-shadow-1);
+        cursor: pointer;
+        transition:
+          transform 260ms ease-in-out,
+          border-color var(--bf-fast) var(--bf-ease),
+          background-color var(--bf-fast) var(--bf-ease),
+          opacity var(--bf-fast) var(--bf-ease);
+
+        &:not(.cfb-card__mobile-order-button--disabled):active {
+          transform: scale(0.94);
+        }
+
+        &--disabled {
+          cursor: default;
+          opacity: 0.28;
+          box-shadow: none;
+        }
+      }
+
+      &__icon {
+        width: 42px;
+        height: 42px;
+        display: inline-grid;
+        place-items: center;
+        border-radius: var(--bf-radius-pill);
+      }
+
+      &__icon-image {
+        width: 100%;
+        height: 100%;
+        max-width: 30px;
+        max-height: 30px;
+        display: block;
+        border-radius: var(--bf-radius-pill);
+        object-fit: cover;
+      }
+
+      &__content {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      &__title {
+        color: var(--bf-muted);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      &__value {
+        color: var(--bf-text);
+        font-size: 22px;
+        line-height: 1.1;
       }
     }
 
-    &:focus-visible {
-      .bf-custom-formula-box__card-delete-button {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        pointer-events: auto;
+    #cfb__empty_card {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border: 1px dashed color-mix(in srgb, var(--bf-primary) 52%, var(--bf-border));
+      color: var(--bf-primary);
+      background: color-mix(in srgb, var(--bf-primary) 5%, transparent);
+      font-weight: 900;
+      box-shadow: none;
+      transition:
+        transform var(--bf-fast) var(--bf-ease),
+        border-color var(--bf-fast) var(--bf-ease),
+        background-color var(--bf-fast) var(--bf-ease),
+        box-shadow var(--bf-fast) var(--bf-ease);
+
+      &:hover {
+        transform: translateY(-2px);
+        border-color: color-mix(in srgb, var(--bf-primary) 72%, var(--bf-border));
+        background: color-mix(in srgb, var(--bf-primary) 8%, transparent);
+        box-shadow: var(--bf-shadow-1);
+      }
+
+      #cfb__empty_card_icon {
+        width: 42px;
+        height: 42px;
+        display: inline-grid;
+        place-items: center;
+        border-radius: var(--bf-radius-pill);
+        color: var(--bf-primary);
+        background: color-mix(in srgb, var(--bf-primary) 12%, transparent);
       }
     }
-
-    &--dragging {
-      opacity: 0.45;
-      transform: scale(0.98);
-    }
   }
 
-  &__card-drag-pill {
-    position: absolute;
-    top: 7px;
-    left: 50%;
-    width: 84px;
-    height: 5px;
-    border-radius: var(--bf-radius-pill);
-    background: color-mix(in srgb, var(--bf-muted) 34%, transparent);
-    transform: translateX(-50%);
-    cursor: grab;
-    transition:
-      width var(--bf-fast) var(--bf-ease),
-      background-color var(--bf-fast) var(--bf-ease),
-      opacity var(--bf-fast) var(--bf-ease);
-  }
-
-  &__card-icon {
-    width: 42px;
-    height: 42px;
-    display: inline-grid;
-    place-items: center;
-    border-radius: var(--bf-radius-pill);
-  }
-
-  &__icon-image,
-  &__selected-icon-image {
-    width: 100%;
-    height: 100%;
-    display: block;
-    object-fit: cover;
-  }
-
-  &__icon-image {
-    max-width: 30px;
-    max-height: 30px;
-    border-radius: var(--bf-radius-pill);
-  }
-
-  &__selected-icon-image {
-    max-width: 38px;
-    max-height: 38px;
-    border-radius: var(--bf-radius-md);
-  }
-
-  &__card-content {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  &__card-title,
-  &__field span,
-  &__result-preview span {
-    color: var(--bf-muted);
-    font-size: 13px;
-    font-weight: 800;
-  }
-
-  &__card-value {
-    color: var(--bf-text);
-    font-size: 22px;
-    line-height: 1.1;
-  }
-
-  &__empty-card {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 10px;
-    border: 1px dashed color-mix(in srgb, var(--bf-primary) 52%, var(--bf-border));
-    color: var(--bf-primary);
-    background: color-mix(in srgb, var(--bf-primary) 5%, transparent);
-    font-weight: 900;
-    box-shadow: none;
-    transition:
-      transform var(--bf-fast) var(--bf-ease),
-      border-color var(--bf-fast) var(--bf-ease),
-      background-color var(--bf-fast) var(--bf-ease),
-      box-shadow var(--bf-fast) var(--bf-ease);
-
-    &:hover {
-      transform: translateY(-2px);
-      border-color: color-mix(in srgb, var(--bf-primary) 72%, var(--bf-border));
-      background: color-mix(in srgb, var(--bf-primary) 8%, transparent);
-      box-shadow: var(--bf-shadow-1);
-    }
-  }
-
-  &__empty-card-icon {
-    width: 42px;
-    height: 42px;
-    display: inline-grid;
-    place-items: center;
-    border-radius: var(--bf-radius-pill);
-    color: var(--bf-primary);
-    background: color-mix(in srgb, var(--bf-primary) 12%, transparent);
-  }
-
-  &__overlay {
+  #cfb__overlay {
     position: fixed;
     inset: 0;
     z-index: 80;
@@ -276,119 +210,135 @@
     background: color-mix(in srgb, var(--bf-text) 22%, transparent);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    animation: bf-custom-formula-overlay-in 160ms var(--bf-ease);
-  }
+    animation: cfb_overlay_in 160ms var(--bf-ease);
 
-  &__editor {
-    width: min(1120px, 100%);
-    max-height: min(920px, calc(100vh - 48px));
-    overflow: visible;
-    padding: 32px;
-    border: 1px solid var(--bf-border);
-    border-radius: var(--bf-radius-lg);
-    background: color-mix(in srgb, var(--bf-surface-bg) 98%, transparent);
-    box-shadow: var(--bf-shadow-3);
-    animation: bf-custom-formula-editor-in var(--bf-med) var(--bf-ease);
-  }
-
-  &__editor-header,
-  &__editor-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  &__name-row {
-    display: grid;
-    grid-template-columns: 80px minmax(0, 1fr);
-    gap: 12px;
-    align-items: end;
-  }
-
-  &__field {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 22px;
-
-    input {
-      width: 100%;
-      height: 50px;
-      padding: 0 14px;
+    #cfb__editor {
+      width: min(1120px, 100%);
+      max-height: min(920px, calc(100vh - 48px));
+      overflow: visible;
+      padding: 32px;
       border: 1px solid var(--bf-border);
-      border-radius: var(--bf-radius-md);
-      color: var(--bf-text);
-      background: var(--bf-surface-bg);
-      outline: none;
-      font: inherit;
-      font-size: 16px;
-      transition:
-        border-color var(--bf-fast) var(--bf-ease),
-        box-shadow var(--bf-fast) var(--bf-ease);
-    }
+      border-radius: var(--bf-radius-lg);
+      background: color-mix(in srgb, var(--bf-surface-bg) 98%, transparent);
+      box-shadow: var(--bf-shadow-3);
+      animation: cfb_editor_in var(--bf-med) var(--bf-ease);
 
-    > input:focus {
-      border-color: color-mix(in srgb, var(--bf-primary) 64%, var(--bf-border));
-      box-shadow: 0 0 0 4px color-mix(in srgb, var(--bf-primary) 10%, transparent);
-    }
-  }
+      #cfb__editor_header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
 
-  &__selected-icon {
-    width: 58px;
-    height: 50px;
-    display: inline-grid;
-    place-items: center;
-    overflow: hidden;
-    padding: 6px;
-    border: 1px solid var(--bf-border);
-    border-radius: var(--bf-radius-lg);
-    cursor: pointer;
-    transition:
-      transform var(--bf-fast) var(--bf-ease),
-      box-shadow var(--bf-fast) var(--bf-ease),
-      border-color var(--bf-fast) var(--bf-ease);
+        #cfb__editor_eyebrow {
+          margin: 0 0 4px;
+          color: var(--bf-muted);
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
 
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: var(--bf-shadow-1);
-    }
-  }
+        #cfb__editor_title {
+          margin: 0;
+          color: var(--bf-text);
+          font-size: 22px;
+          font-weight: 900;
+        }
 
-  &__result-preview {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-top: 22px;
-    padding: 20px;
-    border-radius: var(--bf-radius-lg);
-    background: color-mix(in srgb, var(--bf-primary) 7%, transparent);
+        #cfb__editor_close_button {
+          width: 38px;
+          height: 38px;
+          display: inline-grid;
+          place-items: center;
+          border: 1px solid var(--bf-border);
+          border-radius: var(--bf-radius-pill);
+          color: var(--bf-text);
+          background: var(--bf-surface-bg);
+          cursor: pointer;
+          transition:
+            transform var(--bf-fast) var(--bf-ease),
+            border-color var(--bf-fast) var(--bf-ease),
+            background-color var(--bf-fast) var(--bf-ease),
+            opacity var(--bf-fast) var(--bf-ease);
+        }
+      }
 
-    strong {
-      color: var(--bf-primary);
-      font-size: 26px;
-    }
+      #cfb__editor_name_row {
+        display: grid;
+        grid-template-columns: 80px minmax(0, 1fr);
+        gap: 12px;
+        align-items: end;
 
-    &--invalid {
-      background: color-mix(in srgb, var(--bf-danger) 9%, transparent);
+        .cfb-field {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin-top: 22px;
 
-      strong {
-        color: var(--bf-danger);
+          &__label {
+            color: var(--bf-muted);
+            font-size: 13px;
+            font-weight: 800;
+          }
+
+          input {
+            width: 100%;
+            height: 50px;
+            padding: 0 14px;
+            border: 1px solid var(--bf-border);
+            border-radius: var(--bf-radius-md);
+            color: var(--bf-text);
+            background: var(--bf-surface-bg);
+            outline: none;
+            font: inherit;
+            font-size: 16px;
+            transition:
+              border-color var(--bf-fast) var(--bf-ease),
+              box-shadow var(--bf-fast) var(--bf-ease);
+
+            &:focus {
+              border-color: color-mix(in srgb, var(--bf-primary) 64%, var(--bf-border));
+              box-shadow: 0 0 0 4px color-mix(in srgb, var(--bf-primary) 10%, transparent);
+            }
+          }
+        }
+
+        #cfb__selected_icon_button {
+          width: 58px;
+          height: 50px;
+          display: inline-grid;
+          place-items: center;
+          overflow: hidden;
+          padding: 6px;
+          border: 1px solid var(--bf-border);
+          border-radius: var(--bf-radius-lg);
+          cursor: pointer;
+          transition:
+            transform var(--bf-fast) var(--bf-ease),
+            box-shadow var(--bf-fast) var(--bf-ease),
+            border-color var(--bf-fast) var(--bf-ease);
+
+          &:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--bf-shadow-1);
+          }
+
+          #cfb__selected_icon_image {
+            width: 100%;
+            height: 100%;
+            max-width: 38px;
+            max-height: 38px;
+            display: block;
+            border-radius: var(--bf-radius-md);
+            object-fit: cover;
+          }
+        }
       }
     }
   }
-
-  &__editor-actions {
-    margin-top: 22px;
-  }
-
-  &__mobile-order-controls {
-    display: none;
-  }
 }
 
-@keyframes bf-custom-formula-overlay-in {
+@keyframes cfb_overlay_in {
   from {
     opacity: 0;
   }
@@ -398,7 +348,7 @@
   }
 }
 
-@keyframes bf-custom-formula-editor-in {
+@keyframes cfb_editor_in {
   from {
     opacity: 0;
     transform: translateY(14px) scale(0.98);
@@ -410,91 +360,7 @@
   }
 }
 
-@media (max-width: 700px) {
-  .bf-custom-formula-box {
-    padding: 12px 12px 0;
-
-    &__toolbar {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-
-    &__cards {
-      grid-template-columns: 1fr;
-    }
-
-    &__card {
-      grid-template-columns: 44px minmax(0, 1fr);
-      padding-right: 76px;
-    }
-
-    &__card-delete-button {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-      pointer-events: auto;
-    }
-
-    &__mobile-order-controls {
-      position: absolute;
-      top: 18px;
-      right: 18px;
-      z-index: 5;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    &__mobile-order-button {
-      width: 34px;
-      height: 34px;
-      display: inline-grid;
-      place-items: center;
-      border: 1px solid var(--bf-border);
-      border-radius: var(--bf-radius-pill);
-      color: var(--bf-text);
-      background: var(--bf-surface-bg);
-      cursor: pointer;
-      box-shadow: var(--bf-shadow-1);
-      transition:
-        transform 260ms ease-in-out,
-        border-color var(--bf-fast) var(--bf-ease),
-        background-color var(--bf-fast) var(--bf-ease),
-        opacity var(--bf-fast) var(--bf-ease);
-
-      &:not(.bf-custom-formula-box__mobile-order-button--disabled):active {
-        transform: scale(0.94);
-      }
-
-      &--disabled {
-        cursor: default;
-        opacity: 0.28;
-        box-shadow: none;
-      }
-    }
-
-    &__overlay {
-      padding: 12px;
-      align-items: end;
-    }
-
-    &__editor {
-      max-height: calc(100vh - 24px);
-      padding: 20px;
-      animation-name: bf-custom-formula-editor-mobile-in;
-    }
-
-    &__name-row {
-      grid-template-columns: 70px minmax(0, 1fr);
-    }
-
-    &__card,
-    &__empty-card {
-      width: 100%;
-    }
-  }
-}
-
-@keyframes bf-custom-formula-editor-mobile-in {
+@keyframes cfb_editor_mobile_in {
   from {
     opacity: 0;
     transform: translateY(22px);
@@ -503,5 +369,61 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 700px) {
+  #custom-formula-box {
+    padding: 12px 12px 0;
+
+    #cfb__toolbar {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    #custom-formula-box__cards {
+      grid-template-columns: 1fr;
+
+      .cfb-card,
+      #cfb__empty_card {
+        width: 100%;
+      }
+
+      .cfb-card {
+        grid-template-columns: 44px minmax(0, 1fr);
+        padding-right: 76px;
+
+        .bf-delete-icon--floating {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          pointer-events: auto;
+        }
+
+        &__mobile-order-controls {
+          position: absolute;
+          top: 10px;
+          right: 60px;
+          z-index: 5;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+      }
+    }
+
+    #cfb__overlay {
+      align-items: end;
+      padding: 12px;
+
+      #cfb__editor {
+        max-height: calc(100vh - 24px);
+        padding: 20px;
+        animation-name: cfb_editor_mobile_in;
+
+        #cfb__editor_name_row {
+          grid-template-columns: 70px minmax(0, 1fr);
+        }
+      }
+    }
   }
 }

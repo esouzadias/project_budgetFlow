@@ -145,6 +145,24 @@ const normalizeFormulaPanel = (panel: any): CustomFormulaPanel => ({
   color: panel.color ?? "#1a73e8",
 });
 
+const normalizeSavingsTransaction = (transaction: any) => ({
+  id: typeof transaction?.id === "string" ? transaction.id : crypto.randomUUID(),
+  amount: typeof transaction?.amount === "number" ? transaction.amount : 0,
+  note: typeof transaction?.note === "string" ? transaction.note : "",
+  createdAt: typeof transaction?.createdAt === "number" ? transaction.createdAt : Date.now(),
+});
+
+const normalizeSavingItem = (saving: any): SavingItem => ({
+  id: typeof saving?.id === "string" ? saving.id : crypto.randomUUID(),
+  name: typeof saving?.name === "string" ? saving.name : "",
+  iconId: (typeof saving?.iconId === "string" ? saving.iconId : "savings") as SavingItem["iconId"],
+  iconImageUrl: normalizeIconImageUrl(saving?.iconImageUrl),
+  color: typeof saving?.color === "string" ? saving.color : "#1a73e8",
+  goalAmount: typeof saving?.goalAmount === "number" ? saving.goalAmount : null,
+  recurring: Boolean(saving?.recurring),
+  transactions: Array.isArray(saving?.transactions) ? saving.transactions.map(normalizeSavingsTransaction) : [],
+});
+
 const createDefaultPeriodFromLegacyData = (data: any): MonthSnapshot => ({
   tables: [
     {
@@ -167,6 +185,7 @@ const createDefaultPeriodFromLegacyData = (data: any): MonthSnapshot => ({
       ? data.customFormulaPanels.map(normalizeFormulaPanel)
       : createDefaultFormulaPanels(),
   charts: [],
+  savings: Array.isArray(data.savings) ? data.savings.map(normalizeSavingItem) : [],
 });
 
 const normalizePeriod = (period: any, fallbackData: any): MonthSnapshot => {
@@ -183,6 +202,7 @@ const normalizePeriod = (period: any, fallbackData: any): MonthSnapshot => {
         ? period.customFormulaPanels.map(normalizeFormulaPanel)
         : fallbackPeriod.customFormulaPanels,
     charts: Array.isArray(period.charts) ? period.charts : [],
+    savings: Array.isArray(period.savings) ? period.savings.map(normalizeSavingItem) : fallbackPeriod.savings,
   };
 };
 

@@ -13,6 +13,7 @@ export type DashboardGridBlock = {
   title: string;
   content: ReactNode;
   defaultSize?: DashboardBlockSize;
+  bare?: boolean;
 };
 
 type DashboardLayoutBlock = {
@@ -467,6 +468,7 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
           {layoutBlocks.map((layoutBlock) => {
             const block = blockById.get(layoutBlock.id);
             if (!block) return null;
+            const isBareBlock = Boolean(block.bare);
 
             const blockIndex = layoutBlocks.findIndex((item) => item.id === block.id);
             const isFirstBlock = blockIndex === 0;
@@ -476,7 +478,7 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
               <div
                 key={block.id}
                 data-dashboard-block-id={block.id}
-                className={`bf-dashboard-grid__block bf-dashboard-grid__block--span-${sizeToSpan[layoutBlock.size]}`}
+                className={`bf-dashboard-grid__block bf-dashboard-grid__block--span-${sizeToSpan[layoutBlock.size]} ${isBareBlock ? "bf-dashboard-grid__block--bare" : ""}`}
               >
                 <div className="bf-dashboard-grid__mobile-order-controls" aria-label={`${block.title} order controls`}>
                   <button
@@ -500,16 +502,20 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
                   </button>
                 </div>
 
-                <DragDropContainer
-                  id={block.id}
-                  scope="dashboard-grid"
-                  title={block.title}
-                  className={draggingBlockId === block.id ? "bf-dashboard-grid__dragging-source" : undefined}
-                  onDragStartBlock={setDraggingBlockId}
-                  onDragEndBlock={handleDragEnd}
-                >
-                  {block.content}
-                </DragDropContainer>
+                {isBareBlock ? (
+                  block.content
+                ) : (
+                  <DragDropContainer
+                    id={block.id}
+                    scope="dashboard-grid"
+                    title={block.title}
+                    className={draggingBlockId === block.id ? "bf-dashboard-grid__dragging-source" : undefined}
+                    onDragStartBlock={setDraggingBlockId}
+                    onDragEndBlock={handleDragEnd}
+                  >
+                    {block.content}
+                  </DragDropContainer>
+                )}
               </div>
             );
           })}

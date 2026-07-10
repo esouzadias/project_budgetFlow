@@ -4,6 +4,38 @@
   width: 100%;
   min-width: 0;
 
+  .bf-savings__section-heading {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    //padding: 10px @widthPadding 0;
+
+    .bf-savings__tables-eyebrow,
+    .bf-savings__tables-title {
+      margin: 0;
+    }
+
+    .bf-savings__tables-eyebrow {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--bf-muted);
+      text-transform: uppercase;
+    }
+
+    .bf-savings__tables-title {
+      font-size: 20px;
+      font-weight: 900;
+      line-height: 1.1;
+      color: var(--bf-text);
+    }
+  }
+
+  .bf-savings__grid-shell {
+    width: 100%;
+  }
+
+
   .bf-savings__toolbar {
     display: flex;
     justify-content: flex-end;
@@ -61,60 +93,72 @@
     }
   }
 
-  .bf-savings__grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-    gap: 12px;
-    width: 100%;
-
-    @media (max-width: 600px) {
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    }
-  }
-
   .bf-savings__add-tile {
-    min-height: 140px;
-    border-radius: var(--bf-radius-md);
-    border: 2px dashed rgba(26, 115, 232, 0.22);
-    background: rgba(26, 115, 232, 0.05);
+    width: 100%;
+    height: 100%;
+    min-height: 220px;
+    border-radius: var(--bf-radius-lg);
+    border: 1px dashed color-mix(in srgb, var(--bf-primary) 52%, var(--bf-border));
+    background: color-mix(in srgb, var(--bf-primary) 5%, transparent);
+    color: var(--bf-primary);
     cursor: pointer;
 
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-direction: column;
     gap: 10px;
 
     transition:
       transform var(--bf-fast) var(--bf-ease),
       background var(--bf-fast) var(--bf-ease),
-      border-color var(--bf-fast) var(--bf-ease);
+      border-color var(--bf-fast) var(--bf-ease),
+      box-shadow var(--bf-fast) var(--bf-ease);
 
     &:hover,
     &:focus-visible {
-      transform: translateY(-1px);
-      background: rgba(26, 115, 232, 0.08);
-      border-color: rgba(26, 115, 232, 0.35);
+      transform: translateY(-2px);
+      background: color-mix(in srgb, var(--bf-primary) 8%, transparent);
+      border-color: color-mix(in srgb, var(--bf-primary) 72%, var(--bf-border));
+      box-shadow: var(--bf-shadow-1);
     }
 
     .bf-savings__add-tile-icon {
-      width: 34px;
-      height: 34px;
+      width: 42px;
+      height: 42px;
       border-radius: var(--bf-radius-pill);
       display: grid;
       place-items: center;
-      background: rgba(255, 255, 255, 0.6);
-      border: 1px solid rgba(15, 23, 42, 0.10);
+      color: var(--bf-primary);
+      background: color-mix(in srgb, var(--bf-primary) 12%, transparent);
     }
 
     .bf-savings__add-tile-text {
       opacity: 0.9;
       white-space: nowrap;
+      color: var(--bf-primary);
     }
   }
 
   .bf-savings__item {
+    position: relative;
     padding: 12px;
     min-width: 0;
+
+    &:hover,
+    &:focus-within {
+      .bf-savings__delete-button {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+      }
+    }
+  }
+
+  .bf-savings__delete-button {
+    top: 10px;
+    right: 10px;
+    position: absolute;
   }
 
   .bf-savings__item-head {
@@ -122,6 +166,7 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
+    padding-right: 40px;
   }
 
   .bf-savings__item-left {
@@ -130,6 +175,13 @@
     gap: 10px;
     min-width: 0;
     flex: 1;
+  }
+
+  .bf-savings__head-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
   }
 
   .bf-savings__icon {
@@ -149,6 +201,14 @@
     &:hover {
       transform: translateY(-1px) scale(1.04);
     }
+  }
+
+  .bf-savings__custom-icon-image {
+    width: 24px;
+    height: 24px;
+    display: block;
+    object-fit: cover;
+    border-radius: 7px;
   }
 
   .bf-savings__meta {
@@ -239,6 +299,7 @@
   }
 
   .bf-savings__tx-row {
+    position: relative;
     padding: 0 !important;
     border-radius: var(--bf-radius-md) !important;
     border-color: rgba(26, 115, 232, 0.10) !important;
@@ -250,14 +311,27 @@
       transform var(--bf-fast) var(--bf-ease),
       border-color var(--bf-fast) var(--bf-ease);
 
-    &:hover {
+    &:hover,
+    &:focus-within {
       transform: translateY(-1px);
       border-color: rgba(26, 115, 232, 0.20) !important;
+
+      .bf-savings__tx-delete-button {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+      }
     }
   }
 
+  .bf-savings__tx-delete-button {
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%) scale(0.96);
+  }
+
   .bf-savings__tx-row-inner {
-    padding: 8px 10px;
+    padding: 8px 48px 8px 10px;
     display: flex;
     align-items: center;
     justify-content: space-between;
