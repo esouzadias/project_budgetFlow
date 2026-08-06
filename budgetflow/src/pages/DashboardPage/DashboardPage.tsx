@@ -1,24 +1,32 @@
 import "./DashboardPage.style.less";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import ErrorOutlineRoundedIcon from "@mui/icons-material/ErrorOutlineRounded";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import SyncRoundedIcon from "@mui/icons-material/SyncRounded";
+import Tooltip from "@mui/material/Tooltip";
 
 import Navbar from "../../components/NavBar/Navbar";
 import RegistryTable from "../../components/RegistryTable/RegistryTable";
-import DashboardGrid, { type DashboardGridBlock } from "./components/DashboardGrid";
+import DashboardGrid, { type DashboardGridBlock, type DashboardGridLayoutItem } from "./components/DashboardGrid";
 import CustomFormulaBox from "../../components/CustomFormulaBox/CustomFormulaBox";
 import GenericPopup from "../../components/GenericPopup/GenericPopup";
 import GenericOptionsPopup, { type GenericOptionsPopupOption } from "../../components/GenericOptionsPopup/GenericOptionsPopup";
 import PeriodSelector from "../../components/PeriodSelector/PeriodSelector";
+import TableSettingsPopup from "../../components/TableSettingsPopup/TableSettingsPopup";
 import Savings from "../Savings/Savings";
 import { loadLocalBudgetDB, saveLocalBudgetDB } from "../../storage/budgetStorage";
+import { resolveTableFormulaData } from "../../utils/tableFormulaVariables";
+import { getReadableTextColor } from "../../utils/colorContrast";
+import { useLanguage } from "../../localization/useLanguage";
 
-import type { RegistryRow } from "../../components/RegistryTable/RegistryTable.types";
+import type { LanguageDictionary } from "../../localization/languages";
+
+import type { RegistryRow, RegistryTableSettings } from "../../components/RegistryTable/RegistryTable.types";
 import type { SavingItem } from "../Savings/Savings.type";
 import type {
   BudgetTable,
@@ -47,6 +55,7 @@ const createDefaultFormulaPanels = (): CustomFormulaPanel[] => [
     iconId: "paid",
     iconImageUrl: null,
     color: "#34a853",
+    backgroundColor: null,
   },
   {
     id: createId(),
@@ -56,6 +65,7 @@ const createDefaultFormulaPanels = (): CustomFormulaPanel[] => [
     iconId: "receipt",
     iconImageUrl: null,
     color: "#ea4335",
+    backgroundColor: null,
   },
   {
     id: createId(),
@@ -65,6 +75,7 @@ const createDefaultFormulaPanels = (): CustomFormulaPanel[] => [
     iconId: "bank",
     iconImageUrl: null,
     color: "#1a73e8",
+    backgroundColor: null,
   },
 ];
 
@@ -72,16 +83,24 @@ const createEmptyPeriod = (): MonthSnapshot => ({
   tables: [
     {
       id: "table-income",
+      seriesId: "default-income",
       name: "Income",
       type: "income",
       visible: true,
+      isDefault: true,
+      accentColor: null,
+      surfaceColorCustomized: false,
       rows: [],
     },
     {
       id: "table-expenses",
+      seriesId: "default-expense",
       name: "Expenses",
       type: "expense",
       visible: true,
+      isDefault: true,
+      accentColor: null,
+      surfaceColorCustomized: false,
       rows: [],
     },
   ],
@@ -90,35 +109,17 @@ const createEmptyPeriod = (): MonthSnapshot => ({
   savings: [],
 });
 
-const tableCreationOptions: GenericOptionsPopupOption[] = [
-  {
-    id: "income",
-    label: "Income",
-    description: "Create a new income table.",
-  },
-  {
-    id: "expense",
-    label: "Expenses",
-    description: "Create a new expenses table.",
-  },
-  {
-    id: "custom",
-    label: "Custom",
-    description: "Create a blank custom table.",
-  },
-];
+const getTableBaseName = (type: BudgetTableType, dictionary?: LanguageDictionary["dashboard"]) => {
+  if (type === "income") return dictionary?.income ?? "Income";
+  if (type === "expense") return dictionary?.expenses ?? "Expenses";
+  if (type === "saving") return dictionary?.savings ?? "Savings";
+  if (type === "debt") return dictionary?.debt ?? "Debt";
 
-const getTableBaseName = (type: BudgetTableType) => {
-  if (type === "income") return "Income";
-  if (type === "expense") return "Expenses";
-  if (type === "saving") return "Savings";
-  if (type === "debt") return "Debt";
-
-  return "Custom Table";
+  return dictionary?.customTable ?? "Custom Table";
 };
 
-const getNextTableName = (tables: BudgetTable[], type: BudgetTableType) => {
-  const baseName = getTableBaseName(type);
+const getNextTableName = (tables: BudgetTable[], type: BudgetTableType, dictionary: LanguageDictionary["dashboard"]) => {
+  const baseName = getTableBaseName(type, dictionary);
   const matchingCount = tables.filter((table) => table.type === type).length;
 
   if (matchingCount === 0) return baseName;
@@ -126,14 +127,14 @@ const getNextTableName = (tables: BudgetTable[], type: BudgetTableType) => {
   return `${baseName} ${matchingCount + 1}`;
 };
 
-const getDashboardBlockSize = (index: number, totalBlocks: number) => {
+const getDashboardBlockSpan = (index: number, totalBlocks: number) => {
   const rowStartIndex = Math.floor(index / 3) * 3;
   const rowItemCount = Math.min(3, totalBlocks - rowStartIndex);
 
-  if (rowItemCount === 1) return "full" as const;
-  if (rowItemCount === 2) return "half" as const;
+  if (rowItemCount === 1) return 12 as const;
+  if (rowItemCount === 2) return 6 as const;
 
-  return "third" as const;
+  return 4 as const;
 };
 
 const getMonthKeyFromDate = (date: Date): MonthKey => {
@@ -154,13 +155,60 @@ const shiftMonthKey = (monthKey: MonthKey, offset: number): MonthKey => {
 
 const getPreviousMonthKey = (monthKey: MonthKey): MonthKey => shiftMonthKey(monthKey, -1);
 
+const getRowSeriesId = (row: RegistryRow) => row.seriesId ?? row.id;
+
 const cloneRecurringRows = (rows: RegistryRow[]): RegistryRow[] => {
   return rows
     .filter((row) => row.recurring)
     .map((row) => ({
       ...row,
       id: createId(),
+      seriesId: getRowSeriesId(row),
     }));
+};
+
+const normalizeTableSeriesName = (value: string) => {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+};
+
+const getTableSeriesId = (table: BudgetTable) => {
+  if (table.seriesId) return table.seriesId;
+  if (table.isDefault) return `default-${table.type}`;
+
+  return `legacy-${table.type}-${normalizeTableSeriesName(table.name)}`;
+};
+
+const cloneRecurringTable = (table: BudgetTable): BudgetTable => ({
+  ...table,
+  id: createId(),
+  seriesId: getTableSeriesId(table),
+  isDefault: false,
+  rows: cloneRecurringRows(table.rows),
+});
+
+const cloneDefaultTable = (
+  type: Extract<BudgetTableType, "income" | "expense">,
+  previousPeriod?: MonthSnapshot | null,
+): BudgetTable => {
+  const fallback = createEmptyPeriod().tables.find((table) => table.type === type)!;
+  const source =
+    previousPeriod?.tables.find((table) => table.isDefault && table.type === type) ??
+    previousPeriod?.tables.find((table) => table.type === type && table.name === getTableBaseName(type)) ??
+    fallback;
+
+  return {
+    ...source,
+    id: createId(),
+    seriesId: `default-${type}`,
+    isDefault: true,
+    rows: cloneRecurringRows(source.rows),
+  };
 };
 
 const cloneFormulaPanels = (panels: CustomFormulaPanel[]): CustomFormulaPanel[] => {
@@ -189,20 +237,107 @@ const cloneRecurringSavings = (items: SavingItem[]): SavingItem[] => {
 };
 
 const createPeriodFromPreviousPeriod = (previousPeriod?: MonthSnapshot | null): MonthSnapshot => {
-  if (!previousPeriod) return createEmptyPeriod();
+  const recurringTables = (previousPeriod?.tables ?? [])
+    .filter((table) => !table.isDefault && table.rows.some((row) => row.recurring))
+    .map(cloneRecurringTable);
 
   return {
-    tables: previousPeriod.tables.map((table) => ({
-      ...table,
-      id: createId(),
-      rows: cloneRecurringRows(table.rows),
-    })),
+    tables: [
+      cloneDefaultTable("income", previousPeriod),
+      cloneDefaultTable("expense", previousPeriod),
+      ...recurringTables,
+    ],
     customFormulaPanels:
-      previousPeriod.customFormulaPanels.length > 0
+      previousPeriod && previousPeriod.customFormulaPanels.length > 0
         ? cloneFormulaPanels(previousPeriod.customFormulaPanels)
         : createDefaultFormulaPanels(),
-    charts: cloneCharts(previousPeriod.charts),
-    savings: cloneRecurringSavings(previousPeriod.savings ?? []),
+    charts: cloneCharts(previousPeriod?.charts ?? []),
+    savings: cloneRecurringSavings(previousPeriod?.savings ?? []),
+  };
+};
+
+const syncPeriodTablesFromPreviousPeriod = (
+  period: MonthSnapshot,
+  previousPeriod: MonthSnapshot,
+): MonthSnapshot => {
+  const previousAdditionalTables = previousPeriod.tables.filter((table) => !table.isDefault);
+  const previousBySeries = new Map(previousAdditionalTables.map((table) => [getTableSeriesId(table), table]));
+  let tablesChanged = false;
+
+  const syncedTables = period.tables.flatMap((table) => {
+    if (table.isDefault) return [table];
+
+    const previousTable = previousBySeries.get(getTableSeriesId(table));
+    if (!previousTable) return [table];
+
+    const recurringRows = previousTable.rows.filter((row) => row.recurring);
+
+    if (recurringRows.length === 0) {
+      tablesChanged = true;
+      return [];
+    }
+
+    const previousRowSeries = new Set(previousTable.rows.map(getRowSeriesId));
+    const previousRowLabels = new Set(previousTable.rows.map((row) => normalizeTableSeriesName(row.label)));
+    const usedRowIds = new Set<string>();
+
+    const inheritedRows = recurringRows.map((sourceRow) => {
+      const sourceSeriesId = getRowSeriesId(sourceRow);
+      const existingRow =
+        table.rows.find((row) => getRowSeriesId(row) === sourceSeriesId) ??
+        table.rows.find(
+          (row) =>
+            !usedRowIds.has(row.id) &&
+            normalizeTableSeriesName(row.label) === normalizeTableSeriesName(sourceRow.label),
+        );
+
+      if (!existingRow) return cloneRecurringRows([sourceRow])[0];
+
+      usedRowIds.add(existingRow.id);
+      return existingRow.seriesId === sourceSeriesId
+        ? existingRow
+        : { ...existingRow, seriesId: sourceSeriesId };
+    });
+
+    const localRows = table.rows.filter((row) => {
+      if (usedRowIds.has(row.id)) return false;
+
+      const rowSeriesId = getRowSeriesId(row);
+      const rowLabel = normalizeTableSeriesName(row.label);
+
+      return !previousRowSeries.has(rowSeriesId) && !previousRowLabels.has(rowLabel);
+    });
+    const nextRows = [...inheritedRows, ...localRows];
+
+    if (
+      nextRows.length === table.rows.length &&
+      nextRows.every((row, index) => row === table.rows[index])
+    ) {
+      return [table];
+    }
+
+    tablesChanged = true;
+    return [{ ...table, rows: nextRows }];
+  });
+
+  const existingSeries = new Set(syncedTables.filter((table) => !table.isDefault).map(getTableSeriesId));
+
+  const missingRecurringTables = previousAdditionalTables
+    .filter((table) => table.rows.some((row) => row.recurring) && !existingSeries.has(getTableSeriesId(table)))
+    .map(cloneRecurringTable);
+
+  const defaultTypes: Array<Extract<BudgetTableType, "income" | "expense">> = ["income", "expense"];
+  const missingDefaultTables = defaultTypes
+    .filter((type) => !syncedTables.some((table) => table.isDefault && table.type === type))
+    .map((type) => cloneDefaultTable(type, previousPeriod));
+
+  if (!tablesChanged && missingRecurringTables.length === 0 && missingDefaultTables.length === 0) {
+    return period;
+  }
+
+  return {
+    ...period,
+    tables: [...missingDefaultTables, ...syncedTables, ...missingRecurringTables],
   };
 };
 
@@ -215,11 +350,14 @@ const getMatchingPreviousTable = (previousTables: BudgetTable[], table: BudgetTa
 };
 
 const DashboardPage = () => {
+  const { activeLanguage } = useLanguage();
+  const dictionary = activeLanguage.dictionary;
   const [activePeriodKey, setActivePeriodKey] = useState<MonthKey>(getCurrentMonthKey());
   const [periods, setPeriods] = useState<Record<MonthKey, MonthSnapshot>>({});
   const [currency, setCurrency] = useState("EUR");
   const [tableIdPendingDelete, setTableIdPendingDelete] = useState<string | null>(null);
   const [tableOptionsAnchor, setTableOptionsAnchor] = useState<HTMLElement | null>(null);
+  const [tableSettingsEditor, setTableSettingsEditor] = useState<{ anchorEl: HTMLElement; tableId: string } | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [hasLoadedBudgetDB, setHasLoadedBudgetDB] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
@@ -234,25 +372,32 @@ const DashboardPage = () => {
   const customFormulaPanels = activePeriod.customFormulaPanels;
   const savings = activePeriod.savings ?? [];
   const previousPeriod = periods[getPreviousMonthKey(activePeriodKey)] ?? null;
+  const tableCreationOptions = useMemo<GenericOptionsPopupOption[]>(
+    () => [
+      { id: "income", label: dictionary.dashboard.income, description: dictionary.dashboard.incomeOption },
+      { id: "expense", label: dictionary.dashboard.expenses, description: dictionary.dashboard.expenseOption },
+      { id: "custom", label: dictionary.dashboard.customTable, description: dictionary.dashboard.customOption },
+    ],
+    [dictionary],
+  );
 
+  const resolvedTableData = useMemo(() => resolveTableFormulaData(tables), [tables]);
+  const resolvedPreviousTableData = useMemo(
+    () => resolveTableFormulaData(previousPeriod?.tables ?? []),
+    [previousPeriod],
+  );
   const visibleTables = useMemo(
-    () => tables.filter((table: BudgetTable) => table.visible),
-    [tables],
-  );
-
-  const incomeRows = useMemo<RegistryRow[]>(
-    () => tables.find((table) => table.type === "income")?.rows ?? [],
-    [tables],
-  );
-
-  const expenseRows = useMemo<RegistryRow[]>(
-    () => tables.find((table) => table.type === "expense")?.rows ?? [],
-    [tables],
+    () => resolvedTableData.tables.filter((table: BudgetTable) => table.visible),
+    [resolvedTableData],
   );
 
   const tablePendingDelete = useMemo(
     () => tables.find((table: BudgetTable) => table.id === tableIdPendingDelete) ?? null,
     [tables, tableIdPendingDelete],
+  );
+  const tableBeingConfigured = useMemo(
+    () => tables.find((table) => table.id === tableSettingsEditor?.tableId) ?? null,
+    [tables, tableSettingsEditor],
   );
 
   const captureUndoSnapshot = useCallback(() => {
@@ -283,13 +428,31 @@ const DashboardPage = () => {
 
   const changeActivePeriod = useCallback(
     (nextPeriodKey: MonthKey) => {
+      if (nextPeriodKey === activePeriodKey) return;
+
       captureUndoSnapshot();
 
       setPeriods((currentPeriods) => {
-        if (currentPeriods[nextPeriodKey]) return currentPeriods;
-
         const previousPeriodKey = getPreviousMonthKey(nextPeriodKey);
-        const previousPeriodForTemplate = currentPeriods[previousPeriodKey] ?? currentPeriods[activePeriodKey] ?? createEmptyPeriod();
+        const previousPeriodForTemplate =
+          currentPeriods[previousPeriodKey] ??
+          (nextPeriodKey > activePeriodKey ? currentPeriods[activePeriodKey] : null);
+
+        if (currentPeriods[nextPeriodKey]) {
+          if (!previousPeriodForTemplate || nextPeriodKey < activePeriodKey) return currentPeriods;
+
+          const syncedPeriod = syncPeriodTablesFromPreviousPeriod(
+            currentPeriods[nextPeriodKey],
+            previousPeriodForTemplate,
+          );
+
+          if (syncedPeriod === currentPeriods[nextPeriodKey]) return currentPeriods;
+
+          return {
+            ...currentPeriods,
+            [nextPeriodKey]: syncedPeriod,
+          };
+        }
 
         return {
           ...currentPeriods,
@@ -381,6 +544,74 @@ const DashboardPage = () => {
     [activePeriodKey, captureUndoSnapshot],
   );
 
+  const updateTableSettings = useCallback(
+    (tableId: string, settings: RegistryTableSettings) => {
+      captureUndoSnapshot();
+
+      setPeriods((currentPeriods) => {
+        const currentPeriod = currentPeriods[activePeriodKey] ?? createEmptyPeriod();
+        const nextTables = currentPeriod.tables.map((table) => (table.id === tableId ? { ...table, settings } : table));
+
+        return {
+          ...currentPeriods,
+          [activePeriodKey]: {
+            ...currentPeriod,
+            tables: nextTables,
+          },
+        };
+      });
+    },
+    [activePeriodKey, captureUndoSnapshot],
+  );
+
+  const updateTable = useCallback(
+    (tableId: string, patch: Partial<BudgetTable>) => {
+      captureUndoSnapshot();
+
+      setPeriods((currentPeriods) => {
+        const currentPeriod = currentPeriods[activePeriodKey] ?? createEmptyPeriod();
+
+        return {
+          ...currentPeriods,
+          [activePeriodKey]: {
+            ...currentPeriod,
+            tables: currentPeriod.tables.map((table) => (table.id === tableId ? { ...table, ...patch } : table)),
+          },
+        };
+      });
+    },
+    [activePeriodKey, captureUndoSnapshot],
+  );
+
+  const updateDashboardLayout = useCallback(
+    (layout: DashboardGridLayoutItem[]) => {
+      captureUndoSnapshot();
+
+      setPeriods((currentPeriods) => {
+        const currentPeriod = currentPeriods[activePeriodKey] ?? createEmptyPeriod();
+        const tableById = new Map(currentPeriod.tables.map((table) => [table.id, table]));
+        const orderedTables = layout
+          .map(({ id, span }) => {
+            const table = tableById.get(id);
+            if (!table) return null;
+
+            tableById.delete(id);
+            return { ...table, dashboardSpan: span };
+          })
+          .filter((table) => table !== null);
+
+        return {
+          ...currentPeriods,
+          [activePeriodKey]: {
+            ...currentPeriod,
+            tables: [...orderedTables, ...tableById.values()],
+          },
+        };
+      });
+    },
+    [activePeriodKey, captureUndoSnapshot],
+  );
+
   const openTableOptionsPopup = (event: MouseEvent<HTMLButtonElement>) => {
     setTableOptionsAnchor(event.currentTarget);
   };
@@ -390,17 +621,24 @@ const DashboardPage = () => {
   };
 
   const createTable = (type: BudgetTableType) => {
+    const nextTableId = createId();
+    const settingsAnchor = tableOptionsAnchor;
+
     captureUndoSnapshot();
 
     setPeriods((currentPeriods) => {
       const currentPeriod = currentPeriods[activePeriodKey] ?? createEmptyPeriod();
 
       const nextTable: BudgetTable = {
-        id: createId(),
-        name: getNextTableName(currentPeriod.tables, type),
+        id: nextTableId,
+        seriesId: nextTableId,
+        name: getNextTableName(currentPeriod.tables, type, dictionary.dashboard),
         type,
         visible: true,
         rows: [],
+        accentColor: null,
+        surfaceColorCustomized: false,
+        backgroundImageUrl: null,
       };
 
       return {
@@ -413,6 +651,10 @@ const DashboardPage = () => {
     });
 
     closeTableOptionsPopup();
+
+    if (settingsAnchor) {
+      setTableSettingsEditor({ anchorEl: settingsAnchor, tableId: nextTableId });
+    }
   };
 
   const handleSelectTableOption = (option: GenericOptionsPopupOption) => {
@@ -429,16 +671,17 @@ const DashboardPage = () => {
     createTable("custom");
   };
 
-  const requestDeleteTable = (tableId: string) => {
+  const requestDeleteTable = useCallback((tableId: string) => {
+    if (tables.length <= 1) return;
     setTableIdPendingDelete(tableId);
-  };
+  }, [tables.length]);
 
   const cancelDeleteTable = () => {
     setTableIdPendingDelete(null);
   };
 
   const confirmDeleteTable = () => {
-    if (!tableIdPendingDelete) return;
+    if (!tableIdPendingDelete || tables.length <= 1) return;
 
     captureUndoSnapshot();
 
@@ -517,29 +760,76 @@ const DashboardPage = () => {
       visibleTables.map((table: BudgetTable, index: number) => ({
         id: table.id,
         title: table.name,
-        defaultSize: getDashboardBlockSize(index, visibleTables.length),
+        defaultSpan: table.dashboardSpan ?? getDashboardBlockSpan(index, visibleTables.length),
+        resizable: true,
+        surfaceStyle: {
+          background:
+            table.surfaceColorCustomized && table.accentColor
+              ? table.accentColor
+              : "var(--bf-surface-bg)",
+          borderColor:
+            table.surfaceColorCustomized && table.accentColor && !/gradient\(/i.test(table.accentColor)
+              ? table.accentColor
+              : "var(--bf-surface-border)",
+          "--dbp-table-content-color":
+            table.contentColor ??
+            getReadableTextColor(table.surfaceColorCustomized ? table.accentColor : null),
+          ...(table.backgroundImageUrl
+            ? {
+                backgroundImage: `url(${JSON.stringify(table.backgroundImageUrl)})`,
+                backgroundPosition: "center",
+                backgroundSize: "cover",
+              }
+            : {}),
+        } as CSSProperties,
         content: (
           <div className="dbp-table-block">
-            <button
-              type="button"
-              className="dbp-table-block__delete-button"
-              onClick={() => requestDeleteTable(table.id)}
-              aria-label={`Delete ${table.name}`}
-            >
-              <DeleteOutlineRoundedIcon fontSize="small" />
-            </button>
+            <div className="dbp-table-block__tools">
+              <Tooltip title={dictionary.dashboard.tableSettings} arrow>
+                <button
+                  type="button"
+                  className="dbp-table-block__settings-button"
+                  onClick={(event) => setTableSettingsEditor({ anchorEl: event.currentTarget, tableId: table.id })}
+                  aria-label={`${dictionary.dashboard.configureTable} ${table.name}`}
+                >
+                  <SettingsRoundedIcon fontSize="small" />
+                </button>
+              </Tooltip>
+
+              {tables.length > 1 ? (
+                <Tooltip title={dictionary.dashboard.deleteTable} arrow>
+                  <button
+                    type="button"
+                    className="dbp-table-block__delete-button"
+                    onClick={() => requestDeleteTable(table.id)}
+                    aria-label={`${dictionary.dashboard.deleteTable} ${table.name}`}
+                  >
+                    <DeleteOutlineRoundedIcon fontSize="small" />
+                  </button>
+                </Tooltip>
+              ) : null}
+            </div>
 
             <RegistryTable
               title={table.name}
               invertComparison={table.type === "expense" || table.type === "debt"}
               rows={table.rows}
-              previousRows={getMatchingPreviousTable(previousPeriod?.tables ?? [], table)?.rows ?? []}
+              settings={table.settings}
+              previousRows={getMatchingPreviousTable(resolvedPreviousTableData.tables, table)?.rows ?? []}
+              formulaVariables={resolvedTableData.variables}
+              backgroundColor={table.tableBackgroundColor}
+              contentColor={table.tableContentColor}
+              outerContentColor={
+                table.contentColor ??
+                getReadableTextColor(table.surfaceColorCustomized ? table.accentColor : null)
+              }
               onChangeRows={(rows) => updateTableRows(table.id, rows)}
+              onChangeSettings={(settings) => updateTableSettings(table.id, settings)}
             />
           </div>
         ),
       })),
-    [visibleTables, updateTableRows, previousPeriod],
+    [visibleTables, tables.length, updateTableRows, updateTableSettings, updateTable, requestDeleteTable, resolvedPreviousTableData, resolvedTableData, dictionary],
   );
 
   return (
@@ -555,14 +845,14 @@ const DashboardPage = () => {
           </span>
 
           <span className="dbp-save__label">
-            {saveStatus === "saving" ? "Saving" : null}
-            {saveStatus === "saved" ? "Saved" : null}
-            {saveStatus === "error" ? "Save failed" : null}
+            {saveStatus === "saving" ? dictionary.dashboard.saving : null}
+            {saveStatus === "saved" ? dictionary.dashboard.saved : null}
+            {saveStatus === "error" ? dictionary.dashboard.saveFailed : null}
           </span>
 
           {saveStatus === "saved" && canUndo ? (
             <button type="button" className="dbp-save__undo-button" onClick={undoLastChange}>
-              Undo
+              {dictionary.dashboard.undo}
             </button>
           ) : null}
         </div>
@@ -571,17 +861,17 @@ const DashboardPage = () => {
       <section id="dashboard-page__period-selector">
         <PeriodSelector
           activePeriodKey={activePeriodKey}
-          locale="en-US"
+          locale={activeLanguage.locale}
           onPreviousPeriod={goToPreviousPeriod}
           onNextPeriod={goToNextPeriod}
+          onSelectPeriod={changeActivePeriod}
           onCurrentPeriod={goToCurrentPeriod}
         />
       </section>
 
       <section id="dashboard-page__main-content">
         <CustomFormulaBox
-          incomeRows={incomeRows}
-          expenseRows={expenseRows}
+          tableVariables={resolvedTableData.variables}
           customFormulaPanels={customFormulaPanels}
           onChangeCustomFormulaPanels={updateCustomFormulaPanels}
         />
@@ -589,32 +879,32 @@ const DashboardPage = () => {
         <section id="dashboard-page__tables">
           <section id="dbp__tables_header">
             <div id="dbp__tables_heading">
-              <p id="dbp__tables_eyebrow">Tables</p>
-              <h2 id="dbp__tables_title">My Tables</h2>
+              <p id="dbp__tables_eyebrow">{dictionary.dashboard.tablesEyebrow}</p>
+              <h2 id="dbp__tables_title">{dictionary.dashboard.tablesTitle}</h2>
             </div>
 
             <button type="button" id="dbp__add_table_button" onClick={openTableOptionsPopup}>
               <AddRoundedIcon fontSize="small" />
-              <span>Add new table</span>
+              <span>{dictionary.dashboard.addTable}</span>
             </button>
           </section>
 
           <GenericOptionsPopup
             open={Boolean(tableOptionsAnchor)}
             anchorEl={tableOptionsAnchor}
-            title="Add new table"
+            title={dictionary.dashboard.addTable}
             options={tableCreationOptions}
             onSelect={handleSelectTableOption}
             onClose={closeTableOptionsPopup}
           />
 
-          <DashboardGrid blocks={dashboardBlocks} />
+          <DashboardGrid blocks={dashboardBlocks} onLayoutChange={updateDashboardLayout} />
         </section>
 
         <section id="dashboard-page__savings">
-          <div id="dbp_savings__section-heading">
-            <p className="dbp_savings__tables-eyebrow">Savings</p>
-            <h2 className="dbp_savings__tables-title">My Savings</h2>
+          <div className="dbp_savings__section-heading">
+            <p className="dbp_savings__tables-eyebrow">{dictionary.dashboard.savingsEyebrow}</p>
+            <h2 className="dbp_savings__tables-title">{dictionary.dashboard.savingsTitle}</h2>
           </div>
           <Savings items={savings} onChange={updateSavings} />
         </section>
@@ -622,14 +912,24 @@ const DashboardPage = () => {
 
       <GenericPopup
         open={Boolean(tablePendingDelete)}
-        title="Delete table?"
-        description={`This will permanently delete ${tablePendingDelete?.name ?? "this table"}.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={dictionary.dashboard.deleteTableTitle}
+        description={`${dictionary.dashboard.deleteTablePrefix} ${tablePendingDelete?.name ?? dictionary.dashboard.thisTable}.`}
+        confirmLabel={dictionary.common.delete}
+        cancelLabel={dictionary.common.cancel}
         variant="danger"
         onConfirm={confirmDeleteTable}
         onCancel={cancelDeleteTable}
       />
+
+      {tableBeingConfigured ? (
+        <TableSettingsPopup
+          key={tableBeingConfigured.id}
+          table={tableBeingConfigured}
+          anchorEl={tableSettingsEditor?.anchorEl ?? null}
+          onChange={(patch) => updateTable(tableBeingConfigured.id, patch)}
+          onClose={() => setTableSettingsEditor(null)}
+        />
+      ) : null}
     </main>
   );
 };

@@ -1,10 +1,13 @@
 import { ThemeProvider } from "./theme/ThemeProvider";
+import { LanguageProvider } from "./localization/LanguageProvider";
 import DashboardPage from "./pages/DashboardPage/DashboardPage";
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <DashboardPage />
-    </ThemeProvider>
+    <LanguageProvider>
+      <ThemeProvider>
+        <DashboardPage />
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }

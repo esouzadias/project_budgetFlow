@@ -45,6 +45,8 @@
       align-items: center;
       padding: 24px 14px 14px;
       font: inherit;
+      color: var(--cfb-panel-content, var(--bf-text));
+      background: var(--cfb-panel-bg, var(--bf-surface-bg)) !important;
       border-radius: var(--bf-radius-md) !important;
       transition:
         grid-column 260ms ease-in-out,
@@ -63,6 +65,12 @@
           width: 96px;
           background: color-mix(in srgb, var(--bf-muted) 52%, transparent);
         }
+      }
+
+      .bf-delete-icon--floating {
+        opacity: 0.34;
+        transform: translateY(0) scale(0.96);
+        pointer-events: auto;
       }
 
       &:focus-visible {
@@ -131,7 +139,9 @@
         height: 42px;
         display: inline-grid;
         place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.9);
         border-radius: var(--bf-radius-pill);
+        background: #ffffff !important;
       }
 
       &__icon-image {
@@ -152,13 +162,13 @@
       }
 
       &__title {
-        color: var(--bf-muted);
+        color: color-mix(in srgb, var(--cfb-panel-content, var(--bf-text)) 68%, transparent);
         font-size: 13px;
         font-weight: 800;
       }
 
       &__value {
-        color: var(--bf-text);
+        color: var(--cfb-panel-content, var(--bf-text));
         font-size: 22px;
         line-height: 1.1;
       }
@@ -203,7 +213,7 @@
   #cfb__overlay {
     position: fixed;
     inset: 0;
-    z-index: 80;
+    z-index: 900;
     display: grid;
     place-items: center;
     padding: 24px;
@@ -213,39 +223,131 @@
     animation: cfb_overlay_in 160ms var(--bf-ease);
 
     #cfb__editor {
-      width: min(1120px, 100%);
-      max-height: min(920px, calc(100vh - 48px));
-      overflow: visible;
-      padding: 32px;
+      position: relative;
+      width: min(1820px, calc(100vw - 48px));
+      height: 80vh;
+      max-height: calc(100vh - 48px);
+      min-height: min(620px, calc(100vh - 48px));
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 28px;
       border: 1px solid var(--bf-border);
       border-radius: var(--bf-radius-lg);
-      background: color-mix(in srgb, var(--bf-surface-bg) 98%, transparent);
+      color: var(--cfb-editor-content, var(--bf-text));
+      background: var(--cfb-editor-bg, var(--bf-surface-bg));
       box-shadow: var(--bf-shadow-3);
       animation: cfb_editor_in var(--bf-med) var(--bf-ease);
+      transition:
+        padding-right 260ms var(--bf-ease),
+        width 260ms var(--bf-ease);
+
+      &.cfb-editor--variables-open {
+        padding-right: 416px;
+      }
 
       #cfb__editor_header {
+        min-width: 0;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 12px;
+        padding-right: 92px;
+        flex: 0 0 auto;
 
-        #cfb__editor_eyebrow {
-          margin: 0 0 4px;
-          color: var(--bf-muted);
-          font-size: 11px;
-          font-weight: 800;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
+        #cfb__editor_identity {
+          min-width: 0;
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+          gap: 10px;
+
+          #cfb__selected_icon_button {
+            width: 40px;
+            height: 40px;
+            flex: 0 0 40px;
+            display: inline-grid;
+            place-items: center;
+            overflow: hidden;
+            padding: 0;
+            border: 1px solid rgba(255, 255, 255, 0.92) !important;
+            border-radius: var(--bf-radius-pill);
+            background: #ffffff !important;
+            cursor: pointer;
+            transition:
+              transform var(--bf-fast) var(--bf-ease),
+              box-shadow var(--bf-fast) var(--bf-ease),
+              border-color var(--bf-fast) var(--bf-ease);
+
+            &:hover {
+              transform: translateY(-1px);
+              box-shadow: var(--bf-shadow-1);
+            }
+
+            #cfb__selected_icon_image {
+              width: 32px;
+              height: 32px;
+              display: block;
+              border-radius: var(--bf-radius-pill);
+              object-fit: cover;
+            }
+          }
+
+          .bf-color-picker__trigger--compact {
+            width: 40px;
+            height: 40px;
+            flex: 0 0 40px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+          }
+
+          .bf-color-picker__swatch {
+            width: 40px;
+            height: 40px;
+            flex-basis: 40px;
+            border-color: color-mix(in srgb, var(--cfb-editor-content, var(--bf-text)) 22%, transparent);
+            box-shadow: inset 0 1px 0 color-mix(in srgb, white 42%, transparent);
+          }
+
+          .cfb-field__input {
+            width: min(460px, 45vw);
+            max-width: 460px;
+
+            .MuiInputBase-root {
+              height: 40px;
+              border-radius: var(--bf-radius-pill);
+              background: var(--bf-surface-bg);
+              font-size: 15px;
+            }
+
+            .MuiOutlinedInput-notchedOutline {
+              border-radius: inherit;
+            }
+
+            input {
+              height: auto;
+              padding: 0 14px;
+              border: 0;
+              background: transparent;
+              box-shadow: none;
+            }
+          }
         }
 
-        #cfb__editor_title {
-          margin: 0;
-          color: var(--bf-text);
-          font-size: 22px;
-          font-weight: 900;
+        #cfb__editor_actions {
+          position: absolute;
+          top: 28px;
+          right: 28px;
+          z-index: 8;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
         }
 
-        #cfb__editor_close_button {
+        #cfb__editor_close_button,
+        #cfb__variables_toggle_button {
           width: 38px;
           height: 38px;
           display: inline-grid;
@@ -260,77 +362,56 @@
             border-color var(--bf-fast) var(--bf-ease),
             background-color var(--bf-fast) var(--bf-ease),
             opacity var(--bf-fast) var(--bf-ease);
+
+          &:hover,
+          &.cfb-editor-action--active {
+            color: var(--bf-primary);
+            border-color: color-mix(in srgb, var(--bf-primary) 42%, var(--bf-border));
+            background: color-mix(in srgb, var(--bf-primary) 8%, var(--bf-surface-bg));
+          }
         }
       }
 
-      #cfb__editor_name_row {
-        display: grid;
-        grid-template-columns: 80px minmax(0, 1fr);
-        gap: 12px;
-        align-items: end;
+      .bf-advanced-formula-tool {
+        min-height: 0;
+        flex: 1 1 auto;
+        grid-template-rows: auto minmax(0, 1fr);
+        margin-top: 18px;
 
-        .cfb-field {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          margin-top: 22px;
+        &__input {
+          height: 100%;
+          min-height: 0;
+          align-content: flex-start;
+          align-items: flex-start;
+          justify-content: flex-start;
+          overflow: auto;
+        }
+      }
 
-          &__label {
-            color: var(--bf-muted);
-            font-size: 13px;
-            font-weight: 800;
-          }
+      .bf-advanced-formula-tool__label-row--formula {
+        > span {
+          color: color-mix(in srgb, var(--cfb-editor-content, var(--bf-text)) 72%, transparent);
+        }
+      }
 
-          input {
-            width: 100%;
-            height: 50px;
-            padding: 0 14px;
-            border: 1px solid var(--bf-border);
-            border-radius: var(--bf-radius-md);
-            color: var(--bf-text);
-            background: var(--bf-surface-bg);
-            outline: none;
-            font: inherit;
-            font-size: 16px;
-            transition:
-              border-color var(--bf-fast) var(--bf-ease),
-              box-shadow var(--bf-fast) var(--bf-ease);
+      #cfb__result_preview {
+        flex: 0 0 auto;
+        margin-top: 16px;
+        background: color-mix(in srgb, var(--cfb-editor-content, var(--bf-text)) 9%, transparent);
 
-            &:focus {
-              border-color: color-mix(in srgb, var(--bf-primary) 64%, var(--bf-border));
-              box-shadow: 0 0 0 4px color-mix(in srgb, var(--bf-primary) 10%, transparent);
-            }
-          }
+        #cfb__result_label {
+          color: color-mix(in srgb, var(--cfb-editor-content, var(--bf-text)) 68%, transparent);
         }
 
-        #cfb__selected_icon_button {
-          width: 58px;
-          height: 50px;
-          display: inline-grid;
-          place-items: center;
-          overflow: hidden;
-          padding: 6px;
-          border: 1px solid var(--bf-border);
-          border-radius: var(--bf-radius-lg);
-          cursor: pointer;
-          transition:
-            transform var(--bf-fast) var(--bf-ease),
-            box-shadow var(--bf-fast) var(--bf-ease),
-            border-color var(--bf-fast) var(--bf-ease);
+        #cfb__result_value {
+          color: var(--cfb-editor-content, var(--bf-primary));
+        }
 
-          &:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--bf-shadow-1);
-          }
+        &.bf-preview--invalid {
+          background: color-mix(in srgb, var(--bf-danger) 16%, transparent);
 
-          #cfb__selected_icon_image {
-            width: 100%;
-            height: 100%;
-            max-width: 38px;
-            max-height: 38px;
-            display: block;
-            border-radius: var(--bf-radius-md);
-            object-fit: cover;
+          #cfb__result_value {
+            color: color-mix(in srgb, var(--bf-danger) 72%, var(--cfb-editor-content, white));
           }
         }
       }
@@ -416,12 +497,36 @@
       padding: 12px;
 
       #cfb__editor {
+        width: calc(100vw - 24px);
+        height: calc(100vh - 24px);
+        min-height: 0;
         max-height: calc(100vh - 24px);
         padding: 20px;
         animation-name: cfb_editor_mobile_in;
 
-        #cfb__editor_name_row {
-          grid-template-columns: 70px minmax(0, 1fr);
+        &.cfb-editor--variables-open {
+          padding-right: 20px;
+        }
+
+        #cfb__editor_header {
+          align-items: flex-start;
+          padding-right: 88px;
+
+          #cfb__editor_actions {
+            top: 20px;
+            right: 20px;
+          }
+
+          #cfb__editor_identity {
+            flex-wrap: wrap;
+
+            .cfb-field__input {
+              width: min(100%, 360px);
+              max-width: 100%;
+              order: 3;
+              flex-basis: 100%;
+            }
+          }
         }
       }
     }

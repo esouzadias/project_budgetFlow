@@ -3,14 +3,18 @@ import "./PeriodSelector.styles.less";
 import KeyboardArrowLeftRoundedIcon from "@mui/icons-material/KeyboardArrowLeftRounded";
 import KeyboardArrowRightRoundedIcon from "@mui/icons-material/KeyboardArrowRightRounded";
 import TodayRoundedIcon from "@mui/icons-material/TodayRounded";
+import Tooltip from "@mui/material/Tooltip";
 
+import { useLanguage } from "../../localization/useLanguage";
 import type { MonthKey } from "../../pages/DashboardPage/DashboardPage.types";
+import DatePicker from "../DatePicker/DatePicker";
 
 export type PeriodSelectorLabels = {
   previous: string;
   next: string;
   current: string;
   currentPeriod: string;
+  choosePeriod: string;
 };
 
 export type PeriodSelectorProps = {
@@ -19,14 +23,8 @@ export type PeriodSelectorProps = {
   labels?: Partial<PeriodSelectorLabels>;
   onPreviousPeriod: () => void;
   onNextPeriod: () => void;
+  onSelectPeriod: (periodKey: MonthKey) => void;
   onCurrentPeriod?: () => void;
-};
-
-const defaultLabels: PeriodSelectorLabels = {
-  previous: "Previous month",
-  next: "Next month",
-  current: "Current month",
-  currentPeriod: "Current period",
 };
 
 const formatPeriodLabel = (monthKey: MonthKey, locale: string) => {
@@ -41,12 +39,23 @@ const formatPeriodLabel = (monthKey: MonthKey, locale: string) => {
 
 const PeriodSelector = ({
   activePeriodKey,
-  locale = "en-US",
+  locale,
   labels,
   onPreviousPeriod,
   onNextPeriod,
+  onSelectPeriod,
   onCurrentPeriod,
 }: PeriodSelectorProps) => {
+  const { activeLanguage } = useLanguage();
+  const dictionary = activeLanguage.dictionary;
+  const resolvedLocale = locale ?? activeLanguage.locale;
+  const defaultLabels: PeriodSelectorLabels = {
+    previous: dictionary.period.previousMonth,
+    next: dictionary.period.nextMonth,
+    current: dictionary.period.currentMonth,
+    currentPeriod: dictionary.period.currentPeriod,
+    choosePeriod: dictionary.period.choosePeriod,
+  };
   const mergedLabels = {
     ...defaultLabels,
     ...labels,
@@ -54,34 +63,53 @@ const PeriodSelector = ({
 
   return (
     <section className="bf-period-selector" aria-label={mergedLabels.currentPeriod}>
-      <button
-        type="button"
-        className="bf-period-selector__nav-button"
-        onClick={onPreviousPeriod}
-        aria-label={mergedLabels.previous}
-      >
-        <KeyboardArrowLeftRoundedIcon fontSize="small" />
-      </button>
+      <Tooltip title={mergedLabels.previous} arrow>
+        <button
+          type="button"
+          className="bf-period-selector__nav-button"
+          onClick={onPreviousPeriod}
+          aria-label={mergedLabels.previous}
+        >
+          <KeyboardArrowLeftRoundedIcon fontSize="small" />
+        </button>
+      </Tooltip>
 
-      <div className="bf-period-selector__period">
+      <div className="bf-period-selector__period" aria-live="polite">
         <span className="bf-period-selector__eyebrow">{mergedLabels.currentPeriod}</span>
-        <strong className="bf-period-selector__label">{formatPeriodLabel(activePeriodKey, locale)}</strong>
+        <strong className="bf-period-selector__label">{formatPeriodLabel(activePeriodKey, resolvedLocale)}</strong>
       </div>
 
-      <button
-        type="button"
-        className="bf-period-selector__nav-button"
-        onClick={onNextPeriod}
-        aria-label={mergedLabels.next}
-      >
-        <KeyboardArrowRightRoundedIcon fontSize="small" />
-      </button>
+      <Tooltip title={mergedLabels.next} arrow>
+        <button
+          type="button"
+          className="bf-period-selector__nav-button"
+          onClick={onNextPeriod}
+          aria-label={mergedLabels.next}
+        >
+          <KeyboardArrowRightRoundedIcon fontSize="small" />
+        </button>
+      </Tooltip>
+
+      <span className="bf-period-selector__divider" aria-hidden="true" />
+
+      <DatePicker
+        value={activePeriodKey}
+        onChange={onSelectPeriod}
+        locale={resolvedLocale}
+        label={mergedLabels.choosePeriod}
+      />
 
       {onCurrentPeriod ? (
-        <button type="button" className="bf-period-selector__current-button" onClick={onCurrentPeriod}>
-          <TodayRoundedIcon fontSize="small" />
-          <span>{mergedLabels.current}</span>
-        </button>
+        <Tooltip title={mergedLabels.current} arrow>
+          <button
+            type="button"
+            className="bf-period-selector__current-button"
+            onClick={onCurrentPeriod}
+            aria-label={mergedLabels.current}
+          >
+            <TodayRoundedIcon fontSize="small" />
+          </button>
+        </Tooltip>
       ) : null}
     </section>
   );

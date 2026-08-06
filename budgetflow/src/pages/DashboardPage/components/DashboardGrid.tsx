@@ -1,24 +1,32 @@
 import "./DashboardGrid.style.less";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 
 import DragDropContainer, { type DropIntent } from "../../../components/DragDropContainer/DragDropContainer";
+import { useLanguage } from "../../../localization/useLanguage";
 
-type DashboardBlockSize = "full" | "half" | "third";
+export type DashboardBlockSpan = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+
+export type DashboardGridLayoutItem = {
+  id: string;
+  span: DashboardBlockSpan;
+};
 
 export type DashboardGridBlock = {
   id: string;
   title: string;
   content: ReactNode;
-  defaultSize?: DashboardBlockSize;
+  defaultSpan?: DashboardBlockSpan;
   bare?: boolean;
+  resizable?: boolean;
+  surfaceStyle?: CSSProperties;
 };
 
 type DashboardLayoutBlock = {
   id: string;
-  size: DashboardBlockSize;
+  span: DashboardBlockSpan;
 };
 
 type GridRow = {
@@ -31,106 +39,43 @@ type GridRow = {
 type DropPreview = {
   targetId: string;
   intent: DropIntent;
-  size: DashboardBlockSize;
-  resizeIds: string[];
   style: CSSProperties;
 };
 
 type DashboardGridProps = {
   blocks: DashboardGridBlock[];
+  onLayoutChange?: (layout: DashboardGridLayoutItem[]) => void;
 };
 
 const GRID_GAP = 12;
+const GRID_COLUMNS = 12;
+const MIN_BLOCK_SPAN = 2;
 const ROW_TOLERANCE = 12;
 const VERTICAL_DROP_ZONE_HEIGHT = 120;
 
-const sizeToSpan: Record<DashboardBlockSize, number> = {
-  full: 6,
-  half: 3,
-  third: 2,
+const clampBlockSpan = (value: number): DashboardBlockSpan => {
+  return Math.max(MIN_BLOCK_SPAN, Math.min(GRID_COLUMNS, Math.round(value))) as DashboardBlockSpan;
 };
 
-const getSizeForRowItemCount = (rowItemCount: number): DashboardBlockSize => {
-  if (rowItemCount <= 1) return "full";
-  if (rowItemCount === 2) return "half";
-
-  return "third";
+const resizeLayoutBlock = (
+  blocks: DashboardLayoutBlock[],
+  blockId: string,
+  span: DashboardBlockSpan,
+) => {
+  return blocks.map((block) => (block.id === blockId ? { ...block, span } : block));
 };
 
-const getLayoutRows = (blocks: DashboardLayoutBlock[]) => {
-  const rows: DashboardLayoutBlock[][] = [];
-  let currentRow: DashboardLayoutBlock[] = [];
-  let currentSpan = 0;
-
-  for (const block of blocks) {
-    const blockSpan = sizeToSpan[block.size];
-
-    if (currentRow.length > 0 && currentSpan + blockSpan > 6) {
-      rows.push(currentRow);
-      currentRow = [];
-      currentSpan = 0;
-    }
-
-    currentRow.push(block);
-    currentSpan += blockSpan;
-  }
-
-  if (currentRow.length > 0) {
-    rows.push(currentRow);
-  }
-
-  return rows;
-};
-
-const normalizeRows = (rows: DashboardLayoutBlock[][]): DashboardLayoutBlock[] => {
-  return rows.flatMap((row) => {
-    const rowSize = getSizeForRowItemCount(row.length);
-
-    return row.map((block) => ({
-      ...block,
-      size: rowSize,
-    }));
-  });
-};
-
-const normalizeLayoutSizes = (blocks: DashboardLayoutBlock[]): DashboardLayoutBlock[] => {
-  return normalizeRows(getLayoutRows(blocks));
-};
-
-const appendNewBlocksToLastAvailableRow = (existingBlocks: DashboardLayoutBlock[], newBlocks: DashboardLayoutBlock[]) => {
-  if (newBlocks.length === 0) return normalizeLayoutSizes(existingBlocks);
-  if (existingBlocks.length === 0) return normalizeLayoutSizes(newBlocks);
-
-  const rows = getLayoutRows(existingBlocks);
-  const lastRow = rows[rows.length - 1] ?? [];
-  const previousRows = rows.slice(0, -1);
-  const nextRows = [...previousRows];
-
-  let currentRow = [...lastRow];
-
-  for (const newBlock of newBlocks) {
-    if (currentRow.length >= 3) {
-      nextRows.push(currentRow);
-      currentRow = [];
-    }
-
-    currentRow.push(newBlock);
-  }
-
-  if (currentRow.length > 0) {
-    nextRows.push(currentRow);
-  }
-
-  return normalizeRows(nextRows);
+const areLayoutsEqual = (firstLayout: DashboardLayoutBlock[], secondLayout: DashboardLayoutBlock[]) => {
+  return firstLayout.every(
+    (block, index) => block.id === secondLayout[index]?.id && block.span === secondLayout[index]?.span,
+  );
 };
 
 const getInitialLayout = (blocks: DashboardGridBlock[]): DashboardLayoutBlock[] => {
-  return normalizeLayoutSizes(
-    blocks.map((block) => ({
-      id: block.id,
-      size: block.defaultSize ?? "half",
-    })),
-  );
+  return blocks.map((block) => ({
+    id: block.id,
+    span: block.defaultSpan ?? 6,
+  }));
 };
 
 const reorderBlocks = (blocks: DashboardLayoutBlock[], sourceId: string, targetId: string, insertAfter: boolean) => {
@@ -156,57 +101,34 @@ const getBlockIdFromElement = (element: Element | null) => {
   return blockElement?.dataset.dashboardBlockId ?? null;
 };
 
-const getRowBlockIds = (row: GridRow) => {
-  return row.elements
-    .map((element) => getBlockIdFromElement(element))
-    .filter((id): id is string => Boolean(id));
-};
-
-const DashboardGrid = ({ blocks }: DashboardGridProps) => {
+const DashboardGridContent = ({ blocks, onLayoutChange }: DashboardGridProps) => {
+  const { activeLanguage } = useLanguage();
+  const dictionary = activeLanguage.dictionary;
   const gridRef = useRef<HTMLDivElement | null>(null);
   const previousBlockRectsRef = useRef<Map<string, DOMRect>>(new Map());
   const [layoutBlocks, setLayoutBlocks] = useState<DashboardLayoutBlock[]>(() => getInitialLayout(blocks));
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
+  const [resizingBlockId, setResizingBlockId] = useState<string | null>(null);
   const [dropPreview, setDropPreview] = useState<DropPreview | null>(null);
 
   const blockById = useMemo(() => new Map(blocks.map((block) => [block.id, block])), [blocks]);
 
-  useEffect(() => {
-    setLayoutBlocks((currentLayout) => {
-      const nextIds = new Set(blocks.map((block) => block.id));
-      const existingLayout = currentLayout.filter((block) => nextIds.has(block.id));
-      const existingIds = new Set(existingLayout.map((block) => block.id));
-
-      const newLayout = blocks
-        .filter((block) => !existingIds.has(block.id))
-        .map((block) => ({
-          id: block.id,
-          size: block.defaultSize ?? "full",
-        }));
-
-      return appendNewBlocksToLastAvailableRow(existingLayout, newLayout);
-    });
-  }, [blocks]);
-
   const moveBlockByStep = (blockId: string, direction: -1 | 1) => {
     previousBlockRectsRef.current = captureBlockRects();
+    const currentIndex = layoutBlocks.findIndex((block) => block.id === blockId);
+    const targetIndex = currentIndex + direction;
 
-    setLayoutBlocks((currentLayout) => {
-      const currentIndex = currentLayout.findIndex((block) => block.id === blockId);
-      const targetIndex = currentIndex + direction;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= layoutBlocks.length) {
+      previousBlockRectsRef.current = new Map();
+      return;
+    }
 
-      if (currentIndex < 0 || targetIndex < 0 || targetIndex >= currentLayout.length) {
-        previousBlockRectsRef.current = new Map();
-        return currentLayout;
-      }
+    const nextLayout = [...layoutBlocks];
+    const [movedBlock] = nextLayout.splice(currentIndex, 1);
 
-      const nextLayout = [...currentLayout];
-      const [movedBlock] = nextLayout.splice(currentIndex, 1);
-
-      nextLayout.splice(targetIndex, 0, movedBlock);
-
-      return normalizeLayoutSizes(nextLayout);
-    });
+    nextLayout.splice(targetIndex, 0, movedBlock);
+    setLayoutBlocks(nextLayout);
+    onLayoutChange?.(nextLayout);
   };
 
   const getBlockElements = () => {
@@ -229,6 +151,60 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
     return rects;
   };
 
+  const startBlockResize = (event: React.MouseEvent<HTMLElement>, blockId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const gridElement = gridRef.current;
+    const blockElement = event.currentTarget.closest<HTMLElement>("[data-dashboard-block-id]");
+    if (!gridElement || !blockElement) return;
+
+    const gridRect = gridElement.getBoundingClientRect();
+    const blockRect = blockElement.getBoundingClientRect();
+    const initialLayout = layoutBlocks;
+    let finalLayout = initialLayout;
+
+    setResizingBlockId(blockId);
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const requestedWidth = Math.max(0, moveEvent.clientX - blockRect.left);
+      const spanWidth = (gridRect.width + GRID_GAP) / GRID_COLUMNS;
+      const nextSpan = clampBlockSpan((requestedWidth + GRID_GAP) / spanWidth);
+      const nextLayout = resizeLayoutBlock(initialLayout, blockId, nextSpan);
+
+      if (areLayoutsEqual(finalLayout, nextLayout)) return;
+
+      previousBlockRectsRef.current = captureBlockRects();
+      finalLayout = nextLayout;
+      setLayoutBlocks(nextLayout);
+    };
+
+    const handleMouseUp = () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      setResizingBlockId(null);
+      onLayoutChange?.(finalLayout);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const resizeBlockByStep = (blockId: string, direction: -1 | 1) => {
+    const currentBlock = layoutBlocks.find((block) => block.id === blockId);
+    if (!currentBlock) return;
+
+    const nextLayout = resizeLayoutBlock(
+      layoutBlocks,
+      blockId,
+      clampBlockSpan(currentBlock.span + direction),
+    );
+
+    previousBlockRectsRef.current = captureBlockRects();
+    setLayoutBlocks(nextLayout);
+    onLayoutChange?.(nextLayout);
+  };
+
   useLayoutEffect(() => {
     const previousRects = previousBlockRectsRef.current;
     if (previousRects.size === 0) return;
@@ -243,17 +219,26 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
       const nextRect = element.getBoundingClientRect();
       const deltaX = previousRect.left - nextRect.left;
       const deltaY = previousRect.top - nextRect.top;
+      const scaleX = previousRect.width / nextRect.width;
+      const positionChanged = deltaX !== 0 || deltaY !== 0;
+      const widthChanged = Math.abs(previousRect.width - nextRect.width) > 0.5;
 
-      if (deltaX === 0 && deltaY === 0) continue;
+      if (!positionChanged && !widthChanged) continue;
 
       element.animate(
         [
-          { transform: `translate(${deltaX}px, ${deltaY}px)` },
-          { transform: "translate(0, 0)" },
+          {
+            transform: `translate(${deltaX}px, ${deltaY}px) scaleX(${scaleX})`,
+            transformOrigin: "top left",
+          },
+          {
+            transform: "translate(0, 0) scaleX(1)",
+            transformOrigin: "top left",
+          },
         ],
         {
-          duration: 260,
-          easing: "ease-in-out",
+          duration: 340,
+          easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
         },
       );
     }
@@ -319,13 +304,9 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
     if (!targetId) return null;
 
     const gridRect = gridElement.getBoundingClientRect();
-    const rowIds = getRowBlockIds(row);
-
     return {
       targetId,
       intent,
-      size: "full",
-      resizeIds: Array.from(new Set([...rowIds, draggingBlockId])),
       style: {
         left: 0,
         top: intent === "after" ? row.bottom - gridRect.top + GRID_GAP : row.top - gridRect.top,
@@ -337,31 +318,30 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
 
   const getSideDropPreview = (row: GridRow, clientX: number): DropPreview | null => {
     const gridElement = gridRef.current;
-    if (!gridElement || !draggingBlockId || row.elements.length >= 3) return null;
+    if (!gridElement || !draggingBlockId) return null;
 
     const targetElement = getClosestElementInRow(row, clientX);
     const targetId = getBlockIdFromElement(targetElement);
+    const draggingBlock = layoutBlocks.find((block) => block.id === draggingBlockId);
 
-    if (!targetElement || !targetId) return null;
+    if (!targetElement || !targetId || !draggingBlock) return null;
 
     const gridRect = gridElement.getBoundingClientRect();
     const targetRect = targetElement.getBoundingClientRect();
-    const size: DashboardBlockSize = row.elements.length >= 2 ? "third" : "half";
-    const columnWidth = size === "third" ? (gridRect.width - GRID_GAP * 2) / 3 : (gridRect.width - GRID_GAP) / 2;
+    const columnWidth = (gridRect.width - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
+    const previewWidth = columnWidth * draggingBlock.span + GRID_GAP * (draggingBlock.span - 1);
     const intent: DropIntent = clientX < targetRect.left + targetRect.width / 2 ? "side-before" : "side-after";
-    const targetIndex = row.elements.indexOf(targetElement);
-    const previewIndex = intent === "side-before" ? targetIndex : targetIndex + 1;
-    const rowIds = getRowBlockIds(row);
+    const requestedLeft = intent === "side-before"
+      ? targetRect.left - gridRect.left
+      : targetRect.right - gridRect.left + GRID_GAP;
 
     return {
       targetId,
       intent,
-      size,
-      resizeIds: Array.from(new Set([...rowIds, draggingBlockId])),
       style: {
-        left: previewIndex * (columnWidth + GRID_GAP),
+        left: Math.max(0, Math.min(gridRect.width - previewWidth, requestedLeft)),
         top: row.top - gridRect.top,
-        width: columnWidth,
+        width: previewWidth,
         height: row.height,
       },
     };
@@ -435,14 +415,11 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
       return;
     }
 
-    setLayoutBlocks((currentLayout) => {
-      const insertAfter = dropPreview.intent === "after" || dropPreview.intent === "side-after";
-      const nextLayout = reorderBlocks(currentLayout, draggingBlockId, dropPreview.targetId, insertAfter);
-      const resizeIds = new Set(dropPreview.resizeIds);
-      const resizedLayout = nextLayout.map((block) => (resizeIds.has(block.id) ? { ...block, size: dropPreview.size } : block));
+    const insertAfter = dropPreview.intent === "after" || dropPreview.intent === "side-after";
+    const nextLayout = reorderBlocks(layoutBlocks, draggingBlockId, dropPreview.targetId, insertAfter);
 
-      return normalizeLayoutSizes(resizedLayout);
-    });
+    setLayoutBlocks(nextLayout);
+    onLayoutChange?.(nextLayout);
 
     setDraggingBlockId(null);
     setDropPreview(null);
@@ -459,7 +436,7 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
         <div
           id="dashboard-grid"
           ref={gridRef}
-          className={draggingBlockId ? "bf-dashboard-grid--dragging" : ""}
+          className={`${draggingBlockId ? "bf-dashboard-grid--dragging" : ""} ${resizingBlockId ? "bf-dashboard-grid--resizing" : ""}`}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
         >
@@ -478,15 +455,19 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
               <div
                 key={block.id}
                 data-dashboard-block-id={block.id}
-                className={`bf-dashboard-grid__block bf-dashboard-grid__block--span-${sizeToSpan[layoutBlock.size]} ${isBareBlock ? "bf-dashboard-grid__block--bare" : ""}`}
+                data-dashboard-span={layoutBlock.span}
+                className={`bf-dashboard-grid__block ${
+                  isBareBlock ? "bf-dashboard-grid__block--bare" : ""
+                } ${resizingBlockId === block.id ? "bf-dashboard-grid__block--resizing" : ""}`}
+                style={{ "--bf-dashboard-span": layoutBlock.span } as CSSProperties}
               >
-                <div className="bf-dashboard-grid__mobile-order-controls" aria-label={`${block.title} order controls`}>
+                <div className="bf-dashboard-grid__mobile-order-controls" aria-label={`${block.title} ${dictionary.grid.orderControls}`}>
                   <button
                     type="button"
                     className="bf-dashboard-grid__mobile-order-button"
                     onClick={() => moveBlockByStep(block.id, -1)}
                     disabled={isFirstBlock}
-                    aria-label={`Move ${block.title} up`}
+                    aria-label={`${dictionary.grid.moveUp}: ${block.title}`}
                   >
                     <KeyboardArrowUpRoundedIcon fontSize="small" />
                   </button>
@@ -496,7 +477,7 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
                     className="bf-dashboard-grid__mobile-order-button"
                     onClick={() => moveBlockByStep(block.id, 1)}
                     disabled={isLastBlock}
-                    aria-label={`Move ${block.title} down`}
+                    aria-label={`${dictionary.grid.moveDown}: ${block.title}`}
                   >
                     <KeyboardArrowDownRoundedIcon fontSize="small" />
                   </button>
@@ -510,12 +491,30 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
                     scope="dashboard-grid"
                     title={block.title}
                     className={draggingBlockId === block.id ? "bf-dashboard-grid__dragging-source" : undefined}
+                    style={block.surfaceStyle}
                     onDragStartBlock={setDraggingBlockId}
                     onDragEndBlock={handleDragEnd}
                   >
                     {block.content}
                   </DragDropContainer>
                 )}
+
+                {block.resizable && !isBareBlock ? (
+                  <span
+                    className="bf-dashboard-grid__resize-handle"
+                    role="separator"
+                    tabIndex={0}
+                    aria-orientation="vertical"
+                    aria-label={`${dictionary.grid.resize}: ${block.title}`}
+                    title={dictionary.grid.resize}
+                    onMouseDown={(event) => startBlockResize(event, block.id)}
+                    onKeyDown={(event) => {
+                      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+                      event.preventDefault();
+                      resizeBlockByStep(block.id, event.key === "ArrowLeft" ? -1 : 1);
+                    }}
+                  />
+                ) : null}
               </div>
             );
           })}
@@ -523,6 +522,14 @@ const DashboardGrid = ({ blocks }: DashboardGridProps) => {
       </div>
     </section>
   );
+};
+
+const DashboardGrid = (props: DashboardGridProps) => {
+  const layoutKey = props.blocks
+    .map((block) => `${block.id}:${block.defaultSpan ?? 6}`)
+    .join("|");
+
+  return <DashboardGridContent key={layoutKey} {...props} />;
 };
 
 export default DashboardGrid;

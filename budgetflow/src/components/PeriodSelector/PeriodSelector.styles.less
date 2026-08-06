@@ -14,10 +14,12 @@
 
   &__nav-button,
   &__current-button {
+    width: 34px;
     height: 34px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    flex: 0 0 auto;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
     border: 1px solid transparent;
     border-radius: var(--bf-radius-pill);
     color: var(--bf-text);
@@ -42,26 +44,17 @@
     }
   }
 
-  &__nav-button {
-    width: 34px;
-    flex: 0 0 auto;
-  }
-
   &__current-button {
-    gap: 7px;
-    padding: 0 12px;
     color: var(--bf-primary);
-    font-size: 12px;
-    font-weight: 900;
     background: color-mix(in srgb, var(--bf-primary) 7%, transparent);
   }
 
   &__period {
     min-width: 174px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    flex-direction: column;
     padding: 0 12px;
     text-align: center;
   }
@@ -83,6 +76,13 @@
     text-transform: capitalize;
   }
 
+  &__divider {
+    width: 1px;
+    height: 22px;
+    flex: 0 0 auto;
+    background: color-mix(in srgb, var(--bf-border) 82%, transparent);
+  }
+
   svg {
     color: currentColor;
   }
@@ -97,12 +97,11 @@
     &__period {
       min-width: 0;
       flex: 1;
+      padding: 0 4px;
     }
 
-    &__current-button {
-      span {
-        display: none;
-      }
+    &__divider {
+      display: none;
     }
   }
 }

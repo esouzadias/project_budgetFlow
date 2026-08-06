@@ -54,20 +54,63 @@
       align-items: center;
       gap: 10px;
 
+      .navbar__language-selector {
+        position: relative;
+      }
+
+      .navbar__language-button,
+      .navbar__theme-btn {
+        min-height: 34px;
+        border: 1px solid color-mix(in srgb, var(--bf-border) 85%, transparent) !important;
+        border-radius: var(--bf-radius-pill);
+        color: var(--bf-text) !important;
+        background: color-mix(in srgb, var(--bf-surface-bg) 88%, transparent) !important;
+        transition:
+          transform var(--bf-fast) var(--bf-ease),
+          color var(--bf-fast) var(--bf-ease),
+          background-color var(--bf-fast) var(--bf-ease),
+          border-color var(--bf-fast) var(--bf-ease);
+
+        &:hover,
+        &--open {
+          transform: translateY(-1px);
+          color: var(--bf-primary) !important;
+          background: color-mix(in srgb, var(--bf-primary) 8%, var(--bf-surface-bg)) !important;
+          border-color: color-mix(in srgb, var(--bf-primary) 34%, var(--bf-border)) !important;
+        }
+      }
+
+      .navbar__language-button {
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 0 8px 0 9px;
+        font: inherit;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+
+        svg {
+          font-size: 18px;
+        }
+
+        .navbar__language-chevron {
+          margin-left: -2px;
+          font-size: 16px;
+          transition: transform var(--bf-fast) var(--bf-ease);
+        }
+
+        &--open .navbar__language-chevron {
+          transform: rotate(180deg);
+        }
+      }
+
       .navbar__theme-btn {
         width: 34px;
         height: 34px;
-
-        border-radius: var(--bf-radius-pill);
-        border: 1px solid color-mix(in srgb, var(--bf-border) 85%, transparent) !important;
-        background: color-mix(in srgb, var(--bf-surface-bg) 88%, transparent) !important;
-
-        color: var(--bf-text) !important;
-
-        transition:
-          transform var(--bf-fast) var(--bf-ease),
-          background-color var(--bf-fast) var(--bf-ease),
-          border-color var(--bf-fast) var(--bf-ease);
 
         svg {
           color: currentColor !important;
@@ -75,8 +118,6 @@
 
         &:hover {
           transform: translateY(-1px) scale(1.04);
-          background: color-mix(in srgb, var(--bf-surface-bg) 72%, transparent) !important;
-          border-color: color-mix(in srgb, var(--bf-border-strong) 85%, transparent) !important;
         }
 
         &:active {
@@ -87,7 +128,91 @@
   }
 }
 
+.navbar__language-menu.MuiPaper-root {
+  width: 126px;
+  margin-top: 8px;
+  padding: 6px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--bf-primary) 22%, var(--bf-border));
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--bf-surface-bg) 94%, transparent);
+  box-shadow:
+    var(--bf-shadow-2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+  animation: navbar-language-menu-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  > [role="menu"] {
+    display: grid;
+    gap: 3px;
+  }
+
+  .navbar__language-option {
+    width: 100%;
+    min-height: 36px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 18px;
+    align-items: center;
+    gap: 6px;
+    padding: 0 9px 0 11px;
+    border: 0;
+    border-radius: 10px;
+    color: var(--bf-text);
+    background: transparent;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      color var(--bf-fast) var(--bf-ease),
+      background-color var(--bf-fast) var(--bf-ease),
+      transform var(--bf-fast) var(--bf-ease);
+
+    &:hover,
+    &:focus-visible {
+      color: var(--bf-primary);
+      background: color-mix(in srgb, var(--bf-primary) 8%, transparent);
+      outline: none;
+    }
+
+    &:active {
+      transform: scale(0.97);
+    }
+
+    &--selected {
+      color: var(--bf-primary);
+      background: color-mix(in srgb, var(--bf-primary) 11%, transparent);
+    }
+
+    svg {
+      justify-self: end;
+      font-size: 17px;
+    }
+  }
+}
+
+@keyframes navbar-language-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 :root[data-bf-theme="dark"] {
+  .navbar__language-menu.MuiPaper-root {
+    box-shadow:
+      var(--bf-shadow-2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
   #navbar {
     border-bottom-color: rgba(226, 232, 240, 0.10);
 
@@ -101,6 +226,11 @@
             background: rgba(17, 24, 39, 0.72) !important;
             border-color: rgba(226, 232, 240, 0.22) !important;
           }
+        }
+
+        .navbar__language-button {
+          border-color: rgba(226, 232, 240, 0.14) !important;
+          background: rgba(17, 24, 39, 0.55) !important;
         }
       }
     }

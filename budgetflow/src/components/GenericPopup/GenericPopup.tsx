@@ -2,6 +2,7 @@ import "./GenericPopup.styles.less";
 
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import type { ReactNode } from "react";
+import { useLanguage } from "../../localization/useLanguage";
 
 export type GenericPopupVariant = "default" | "danger" | "success";
 
@@ -24,16 +25,18 @@ const GenericPopup = ({
   open,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   variant = "default",
   showCloseButton = true,
   closeOnBackdropClick = true,
-  width = "min(440px, 100%);",
+  width = "min(440px, 100%)",
   onConfirm,
   onCancel,
   children,
 }: GenericPopupProps) => {
+  const { activeLanguage } = useLanguage();
+  const dictionary = activeLanguage.dictionary;
   if (!open) return null;
 
   const handleBackdropMouseDown = () => {
@@ -42,9 +45,10 @@ const GenericPopup = ({
   };
 
   return (
-    <div className="bf-generic-popup" style={{width: width}} role="presentation" onMouseDown={handleBackdropMouseDown}>
+    <div className="bf-generic-popup" role="presentation" onMouseDown={handleBackdropMouseDown}>
       <section
         className={`bf-generic-popup__panel bf-generic-popup__panel--${variant}`}
+        style={{ width }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="bf-generic-popup-title"
@@ -57,7 +61,7 @@ const GenericPopup = ({
           </div>
 
           {showCloseButton ? (
-            <button type="button" className="bf-generic-popup__close-button" onClick={onCancel} aria-label="Close popup">
+            <button type="button" className="bf-generic-popup__close-button" onClick={onCancel} aria-label={dictionary.genericPopup.close}>
               <CloseRoundedIcon fontSize="small" />
             </button>
           ) : null}
@@ -68,7 +72,7 @@ const GenericPopup = ({
         <footer className="bf-generic-popup__actions">
           {onCancel ? (
             <button type="button" className="bf-generic-popup__button bf-generic-popup__button--cancel" onClick={onCancel}>
-              {cancelLabel}
+              {cancelLabel ?? dictionary.common.cancel}
             </button>
           ) : null}
 
@@ -78,7 +82,7 @@ const GenericPopup = ({
               className={`bf-generic-popup__button bf-generic-popup__button--confirm bf-generic-popup__button--${variant}`}
               onClick={onConfirm}
             >
-              {confirmLabel}
+              {confirmLabel ?? dictionary.common.confirm}
             </button>
           ) : null}
         </footer>

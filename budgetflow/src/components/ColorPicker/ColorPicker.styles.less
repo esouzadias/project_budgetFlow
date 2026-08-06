@@ -1,0 +1,254 @@
+@import "../../styles/Globals.less";
+
+.bf-color-picker {
+  &__trigger {
+    min-width: 0;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 9px;
+    border: 1px solid var(--bf-border);
+    border-radius: var(--bf-radius-pill);
+    color: var(--bf-text);
+    background: color-mix(in srgb, var(--bf-surface-bg) 92%, transparent);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 850;
+    cursor: pointer;
+
+    &--compact {
+      width: 28px;
+      height: 28px;
+      justify-content: center;
+      padding: 0;
+    }
+  }
+
+  &__swatch {
+    --bf-picked-color: transparent;
+
+    width: 17px;
+    height: 17px;
+    flex: 0 0 17px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--bf-border) 88%, transparent);
+    border-radius: 50%;
+    color: var(--bf-muted);
+    background: var(--bf-picked-color);
+    font-size: 11px;
+
+    &--auto {
+      background: var(--bf-surface-bg);
+    }
+  }
+
+  &__popover {
+    width: 286px;
+    padding: 12px;
+    border: 1px solid var(--bf-border);
+    border-radius: var(--bf-radius-lg) !important;
+    color: var(--bf-text) !important;
+    background: color-mix(in srgb, var(--bf-surface-bg) 98%, transparent) !important;
+    box-shadow: var(--bf-shadow-2) !important;
+
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-bottom: 10px;
+
+      strong {
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      small {
+        overflow: hidden;
+        color: var(--bf-muted);
+        font-size: 9px;
+        font-weight: 750;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  &__palette {
+    display: grid;
+    grid-template-columns: repeat(10, 24px);
+    gap: 7px;
+
+    &--inline {
+      grid-template-columns: repeat(12, 18px);
+      gap: 8px;
+
+      .bf-color-picker__option {
+        width: 18px;
+        height: 18px;
+
+        svg {
+          width: 12px;
+          height: 12px;
+        }
+      }
+    }
+  }
+
+  &__option {
+    width: 24px;
+    height: 24px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--bf-text) 18%, transparent);
+    border-radius: 50%;
+    color: var(--bf-text);
+    cursor: pointer;
+    box-shadow: none;
+    transition:
+      transform var(--bf-fast) var(--bf-ease),
+      box-shadow var(--bf-fast) var(--bf-ease);
+
+    &:hover {
+      transform: translateY(-1px) scale(1.06);
+    }
+
+    &--active {
+      border-color: var(--bf-surface-bg);
+      box-shadow: 0 0 0 2px var(--bf-primary);
+    }
+
+    &--auto {
+      background: var(--bf-surface-bg);
+      font: inherit;
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    &--custom {
+      color: white;
+      background: conic-gradient(from 0deg, #ea4335, #fbbc05, #34a853, #00acc1, #a142f4, #ea4335);
+
+      svg {
+        width: 14px;
+        height: 14px;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55));
+      }
+    }
+
+    &--gradient {
+      color: white;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+
+      svg {
+        width: 15px;
+        height: 15px;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+      }
+    }
+  }
+
+  &__editor {
+    min-width: 214px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--bf-border);
+    border-radius: var(--bf-radius-lg) !important;
+    color: var(--bf-text) !important;
+    background: color-mix(in srgb, var(--bf-surface-bg) 98%, transparent) !important;
+    box-shadow: var(--bf-shadow-2) !important;
+
+    > strong {
+      font-size: 12px;
+      font-weight: 900;
+    }
+  }
+
+  &__native-color {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+
+    > span,
+    input {
+      grid-row: 1;
+      grid-column: 1;
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--bf-border);
+      border-radius: 50%;
+    }
+
+    input {
+      padding: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    small {
+      grid-column: 2;
+      color: var(--bf-muted);
+      font-size: 11px;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+  }
+
+  &__gradient-editor {
+    width: 276px;
+  }
+
+  &__gradient-preview {
+    height: 46px;
+    border: 1px solid var(--bf-border);
+    border-radius: var(--bf-radius-md);
+  }
+
+  &__gradient-colors {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.25fr;
+    gap: 8px;
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+
+      span {
+        color: var(--bf-muted);
+        font-size: 9px;
+        font-weight: 850;
+        text-transform: uppercase;
+      }
+
+      input,
+      select {
+        width: 100%;
+        height: 34px;
+        padding: 2px;
+        border: 1px solid var(--bf-border);
+        border-radius: var(--bf-radius-md);
+        color: var(--bf-text);
+        background: var(--bf-surface-bg);
+        cursor: pointer;
+      }
+    }
+  }
+
+  &__apply-gradient {
+    height: 34px;
+    border: 1px solid color-mix(in srgb, var(--bf-primary) 40%, var(--bf-border));
+    border-radius: var(--bf-radius-pill);
+    color: var(--bf-primary);
+    background: color-mix(in srgb, var(--bf-primary) 8%, var(--bf-surface-bg));
+    font: inherit;
+    font-size: 11px;
+    font-weight: 900;
+    cursor: pointer;
+  }
+}

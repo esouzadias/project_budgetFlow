@@ -4,13 +4,13 @@
   =========================================== */
 
 /* VARIABLES (legacy - keep) */
-@primary: #2563eb;
-@primary-dark: #1e40af;
-@secondary: #10b981;
-@secondary-dark: #047857;
+@primary: #20bfa9;
+@primary-dark: #128a82;
+@secondary: #43cf7c;
+@secondary-dark: #238f5b;
 @background: #ffffff;
-@text-color: #0f172a;
-@border-color: #d1d5db;
+@text-color: #263646;
+@border-color: #d4e1df;
 @error: #ef4444;
 @error-dark: #b91c1c;
 
@@ -33,30 +33,31 @@
   --bf-radius-pill: 50px;
 
   /* Brand */
-  --bf-primary: #1a73e8;
-  --bf-primary-2: #2563eb;
-  --bf-success: #10b981;
+  --bf-primary: #20bfa9;
+  --bf-primary-2: #43cf7c;
+  --bf-accent: var(--bf-primary-2);
+  --bf-success: #2fbf71;
   --bf-danger: #ef4444;
   --bf-warn: #f59e0b;
 
   /* Base */
-  --bf-bg: #f3f5fb;
-  --bf-text: rgba(15, 23, 42, 0.92);
-  --bf-muted: rgba(15, 23, 42, 0.62);
+  --bf-bg: #f2f8f7;
+  --bf-text: rgba(38, 54, 70, 0.94);
+  --bf-muted: rgba(38, 54, 70, 0.62);
 
   /* Borders */
-  --bf-border: rgba(15, 23, 42, 0.12);
-  --bf-border-strong: rgba(15, 23, 42, 0.18);
+  --bf-border: rgba(38, 76, 75, 0.13);
+  --bf-border-strong: rgba(38, 76, 75, 0.2);
 
   /* Glass surfaces */
-  --bf-glass: rgba(255, 255, 255, 0.86);
-  --bf-glass-2: rgba(255, 255, 255, 0.72);
+  --bf-glass: rgba(255, 255, 255, 0.88);
+  --bf-glass-2: rgba(247, 252, 251, 0.76);
 
   /* Shadows */
-  --bf-shadow-1: 0 8px 22px rgba(15, 23, 42, 0.08);
-  --bf-shadow-2: 0 16px 42px rgba(15, 23, 42, 0.12);
-  --bf-shadow-3: 0 22px 70px rgba(15, 23, 42, 0.16);
-  --bf-shadow-4: 0 2px 10px rgba(15, 23, 42, 0.20);
+  --bf-shadow-1: 0 8px 22px rgba(38, 54, 70, 0.08);
+  --bf-shadow-2: 0 16px 42px rgba(38, 54, 70, 0.12);
+  --bf-shadow-3: 0 22px 70px rgba(38, 54, 70, 0.16);
+  --bf-shadow-4: 0 2px 10px rgba(38, 54, 70, 0.18);
 
   /* Motion */
   --bf-ease: cubic-bezier(.2,.8,.2,1);
@@ -73,18 +74,24 @@
   Dark theme (toggle via <html data-bf-theme="dark">)
    =========================================== */
 :root[data-bf-theme="dark"] {
+  /* Brand */
+  --bf-primary: #4dd8c3;
+  --bf-primary-2: #65de8d;
+  --bf-accent: var(--bf-primary-2);
+  --bf-success: #52d58a;
+
   /* Base */
-  --bf-bg: #0b1220;
-  --bf-text: rgba(226, 232, 240, 0.92);
-  --bf-muted: rgba(226, 232, 240, 0.62);
+  --bf-bg: #0c171b;
+  --bf-text: rgba(235, 247, 244, 0.94);
+  --bf-muted: rgba(211, 233, 228, 0.64);
 
   /* Borders */
-  --bf-border: rgba(226, 232, 240, 0.14);
-  --bf-border-strong: rgba(226, 232, 240, 0.22);
+  --bf-border: rgba(165, 222, 211, 0.15);
+  --bf-border-strong: rgba(165, 222, 211, 0.24);
 
   /* Glass surfaces */
-  --bf-glass: rgba(17, 24, 39, 0.72);
-  --bf-glass-2: rgba(17, 24, 39, 0.56);
+  --bf-glass: rgba(16, 34, 38, 0.78);
+  --bf-glass-2: rgba(16, 34, 38, 0.62);
 
   /* Shadows */
   --bf-shadow-1: 0 8px 22px rgba(0, 0, 0, 0.35);
@@ -107,13 +114,38 @@ body {
   background: var(--bf-bg);
 }
 
+/* MUI controls inherit the BudgetFlow brand in both themes. */
+.MuiSwitch-root {
+  .MuiSwitch-switchBase {
+    color: color-mix(in srgb, var(--bf-muted) 72%, var(--bf-surface-bg)) !important;
+
+    &.Mui-checked {
+      color: var(--bf-primary) !important;
+
+      + .MuiSwitch-track {
+        background-color: var(--bf-primary) !important;
+        opacity: 0.42 !important;
+      }
+    }
+
+    &.Mui-disabled {
+      opacity: 0.34;
+    }
+  }
+
+  .MuiSwitch-track {
+    background-color: color-mix(in srgb, var(--bf-muted) 46%, transparent) !important;
+    opacity: 0.34 !important;
+  }
+}
+
 /* ===========================================
   Core bubble / glass card
    =========================================== */
 .bf-bubble-surface {
   position: relative;
   border-radius: @borderRound !important;
-  border: 1px solid rgba(15, 23, 42, 0.10);
+  border: 1px solid var(--bf-surface-border);
   background: var(--bf-surface-bg);
   backdrop-filter: blur(var(--bf-surface-blur));
   -webkit-backdrop-filter: blur(var(--bf-surface-blur));
@@ -129,7 +161,7 @@ body {
 .bf-bubble-surface:hover {
   // transform: translateY(-2px);
   // box-shadow: var(--bf-shadow-2);
-  border-color: rgba(26, 115, 232, 0.22);
+  border-color: color-mix(in srgb, var(--bf-primary) 28%, var(--bf-border));
 }
 
 .bf-bubble-surface:active {
@@ -151,7 +183,7 @@ body {
 }
 
 :root[data-bf-theme="dark"] .bf-bubble-surface:hover {
-  border-color: rgba(59, 130, 246, 0.35);
+  border-color: color-mix(in srgb, var(--bf-primary) 42%, var(--bf-border));
   box-shadow: var(--bf-shadow-2);
 }
 
@@ -360,11 +392,11 @@ body {
 }
 
 .bf-row--active {
-  background: rgba(26, 115, 232, 0.10) !important;
+  background: color-mix(in srgb, var(--bf-primary) 10%, transparent) !important;
 }
 
 :root[data-bf-theme="dark"] .bf-row--active {
-  background: rgba(59, 130, 246, 0.18) !important;
+  background: color-mix(in srgb, var(--bf-primary) 18%, transparent) !important;
 }
 
 /* Subtle edit hint */
@@ -383,10 +415,10 @@ body {
    Small global helpers (optional)
    =========================================== */
 .bf-glow-primary {
-  box-shadow: 0 0 0 6px rgba(26,115,232,0.10);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--bf-primary) 10%, transparent);
 }
 
 /* Selection polish */
 ::selection {
-  background: rgba(26, 115, 232, 0.18);
+  background: color-mix(in srgb, var(--bf-primary) 20%, transparent);
 }

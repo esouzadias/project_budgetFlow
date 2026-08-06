@@ -1,0 +1,148 @@
+@import "../../styles/Globals.less";
+
+.bf-date-picker {
+  display: inline-flex;
+  align-items: center;
+
+  &__button {
+    width: 34px;
+    height: 34px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--bf-radius-pill);
+    color: var(--bf-text);
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+    transition:
+      transform var(--bf-fast) var(--bf-ease),
+      color var(--bf-fast) var(--bf-ease),
+      background-color var(--bf-fast) var(--bf-ease),
+      border-color var(--bf-fast) var(--bf-ease);
+
+    &:hover {
+      transform: translateY(-1px);
+      color: var(--bf-primary);
+      border-color: color-mix(in srgb, var(--bf-primary) 34%, var(--bf-border));
+      background: color-mix(in srgb, var(--bf-primary) 9%, transparent);
+    }
+
+    &:active {
+      transform: scale(0.96);
+    }
+  }
+
+  svg {
+    color: currentColor;
+  }
+}
+
+.MuiPopover-paper.bf-date-picker__popup {
+  width: min(320px, calc(100vw - 24px));
+  margin-top: 8px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--bf-border) 82%, transparent);
+  border-radius: var(--bf-radius-lg);
+  color: var(--bf-text);
+  background: color-mix(in srgb, var(--bf-surface-bg) 97%, transparent);
+  box-shadow: var(--bf-shadow-3);
+  backdrop-filter: blur(var(--bf-surface-blur));
+  -webkit-backdrop-filter: blur(var(--bf-surface-blur));
+
+  .bf-date-picker__header {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) 34px;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .bf-date-picker__header-button {
+    width: 34px;
+    height: 34px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--bf-radius-pill);
+    color: var(--bf-text);
+    background: transparent;
+    cursor: pointer;
+    transition:
+      transform var(--bf-fast) var(--bf-ease),
+      color var(--bf-fast) var(--bf-ease),
+      background-color var(--bf-fast) var(--bf-ease),
+      border-color var(--bf-fast) var(--bf-ease);
+
+    &:hover {
+      transform: translateY(-1px);
+      color: var(--bf-primary);
+      border-color: color-mix(in srgb, var(--bf-primary) 34%, var(--bf-border));
+      background: color-mix(in srgb, var(--bf-primary) 9%, transparent);
+    }
+
+    &:active {
+      transform: scale(0.96);
+    }
+  }
+
+  .bf-date-picker__header-spacer {
+    width: 34px;
+    height: 34px;
+  }
+
+  .bf-date-picker__title {
+    text-align: center;
+    font-size: 15px;
+    font-weight: 900;
+  }
+
+  .bf-date-picker__instruction {
+    margin: 12px 0 10px;
+    color: var(--bf-muted);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .bf-date-picker__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .bf-date-picker__option {
+    min-height: 40px;
+    padding: 0 8px;
+    border: 1px solid color-mix(in srgb, var(--bf-border) 82%, transparent);
+    border-radius: var(--bf-radius-md);
+    color: var(--bf-text);
+    background: color-mix(in srgb, var(--bf-surface-bg) 90%, transparent);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: capitalize;
+    cursor: pointer;
+    transition:
+      transform var(--bf-fast) var(--bf-ease),
+      color var(--bf-fast) var(--bf-ease),
+      background-color var(--bf-fast) var(--bf-ease),
+      border-color var(--bf-fast) var(--bf-ease);
+
+    &:hover {
+      transform: translateY(-1px);
+      color: var(--bf-primary);
+      border-color: color-mix(in srgb, var(--bf-primary) 48%, var(--bf-border));
+      background: color-mix(in srgb, var(--bf-primary) 9%, var(--bf-surface-bg));
+    }
+
+    &--selected {
+      color: var(--bf-primary);
+      border-color: color-mix(in srgb, var(--bf-primary) 62%, var(--bf-border));
+      background: color-mix(in srgb, var(--bf-primary) 13%, var(--bf-surface-bg));
+    }
+  }
+}

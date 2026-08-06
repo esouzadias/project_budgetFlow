@@ -15,7 +15,9 @@ import {
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import Tooltip from "@mui/material/Tooltip";
 
+import GenericInput from "../GenericInput/GenericInput";
 import { getVariableDisplayLabel, type FormulaVariable } from "../VariablesViewer/VariablesViewer";
+import { useLanguage } from "../../localization/useLanguage";
 
 export type FormulaEvaluation = {
   value: number | null;
@@ -34,6 +36,7 @@ type AdvancedFormulaToolProps = {
   result: FormulaEvaluation | null;
   formatValue: (value: number) => string;
   onChangeExpression: (expression: string) => void;
+  variablesPanelOpen?: boolean;
 };
 
 const variableAccentByIndex: Array<"green" | "blue" | "purple" | "orange"> = ["green", "blue", "purple", "orange"];
@@ -138,7 +141,10 @@ const AdvancedFormulaTool = ({
   variables,
   formatValue,
   onChangeExpression,
+  variablesPanelOpen = false,
 }: AdvancedFormulaToolProps) => {
+  const { activeLanguage } = useLanguage();
+  const dictionary = activeLanguage.dictionary;
   const [tokens, setTokens] = useState<EditableFormulaToken[]>(() => expressionToEditableTokens(expression, variables));
   const [inputValue, setInputValue] = useState("");
   const [insertIndex, setInsertIndex] = useState<number | null>(null);
@@ -584,10 +590,11 @@ const AdvancedFormulaTool = ({
     if (getActiveInsertIndex() !== index) return null;
 
     return (
-      <input
-        ref={inputRef}
+      <GenericInput
+        unstyled
+        inputRef={inputRef}
         value={inputValue}
-        placeholder={tokens.length === 0 ? "Type a variable or number" : ""}
+        placeholder={tokens.length === 0 ? dictionary.formula.inputPlaceholder : ""}
         onChange={(event) => setInputValue(event.target.value)}
         onFocus={() => setInputFocused(true)}
         onKeyDown={handleInputKeyDown}
@@ -638,101 +645,110 @@ const AdvancedFormulaTool = ({
   };
 
   return (
-    <section className="bf-advanced-formula-tool">
-      <div className="bf-advanced-formula-tool__label-row">
-        <span>Variables</span>
-      </div>
-
-      {searchOpen ? (
-        <label ref={searchPanelRef} className="bf-advanced-formula-tool__search-panel">
-          <SearchRoundedIcon fontSize="small" />
-          <input
-            ref={searchInputRef}
-            value={searchValue}
-            placeholder="Search variables"
-            autoComplete="off"
-            onFocus={() => setSearchFocused(true)}
-            onChange={(event) => setSearchValue(event.target.value)}
-            onKeyDown={handleSearchKeyDown}
-          />
-
-          {showSearchAutocomplete ? (
-            <div className="bf-advanced-formula-tool__search-autocomplete">
-              {searchAutocompleteSuggestions.map((variable, variableIndex) => (
-                <button
-                  key={`${variable.source}-${variable.key}`}
-                  type="button"
-                  className={`bf-advanced-formula-tool__search-autocomplete-option ${highlightedSearchIndex === variableIndex ? "bf-advanced-formula-tool__search-autocomplete-option--active" : ""
-                    }`}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    addVariable(variable);
-                  }}
-                >
-                  <span>
-                    <strong>{getVariableDisplayLabel(variable)}</strong>
-                    <small>{variable.key}</small>
-                  </span>
-
-                  <strong>{formatValue(variable.value)}</strong>
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </label>
-      ) : null}
-
+    <section
+      className={`bf-advanced-formula-tool ${
+        variablesPanelOpen ? "bf-advanced-formula-tool--variables-open" : ""
+      }`}
+    >
       <div className="bf-advanced-formula-tool__quick-bar">
-        <button
-          ref={searchButtonRef}
-          type="button"
-          className={`bf-advanced-formula-tool__search-button ${searchOpen ? "bf-advanced-formula-tool__search-button--active" : ""
-            }`}
-          onClick={() => {
-            setSearchOpen((currentValue) => !currentValue);
-            setSearchValue("");
-            setSearchFocused(false);
-            setHighlightedSearchIndex(0);
-          }}
-          aria-label="Search variables"
-        >
-          <SearchRoundedIcon fontSize="small" />
-        </button>
+        <div className="bf-advanced-formula-tool__variables-controls">
+          <span className="bf-advanced-formula-tool__variables-title">
+            <strong>{dictionary.formula.variables}</strong>
+            <small>{variables.length}</small>
+          </span>
+
+          <Tooltip title={dictionary.formula.searchVariables} arrow>
+            <button
+              ref={searchButtonRef}
+              type="button"
+              className={`bf-advanced-formula-tool__search-button ${searchOpen ? "bf-advanced-formula-tool__search-button--active" : ""}`}
+              onClick={() => {
+                setSearchOpen((currentValue) => !currentValue);
+                setSearchValue("");
+                setSearchFocused(false);
+                setHighlightedSearchIndex(0);
+              }}
+              aria-label={dictionary.formula.searchVariables}
+            >
+              <SearchRoundedIcon fontSize="small" />
+            </button>
+          </Tooltip>
+        </div>
+
+        <p className="bf-advanced-formula-tool__variables-help">{dictionary.formula.variablesHelp}</p>
+
+        {searchOpen ? (
+          <label ref={searchPanelRef} className="bf-advanced-formula-tool__search-panel">
+            <SearchRoundedIcon fontSize="small" />
+            <GenericInput
+              unstyled
+              inputRef={searchInputRef}
+              value={searchValue}
+              placeholder={dictionary.formula.searchVariables}
+              autoComplete="off"
+              onFocus={() => setSearchFocused(true)}
+              onChange={(event) => setSearchValue(event.target.value)}
+              onKeyDown={handleSearchKeyDown}
+            />
+
+            {showSearchAutocomplete ? (
+              <div className="bf-advanced-formula-tool__search-autocomplete">
+                {searchAutocompleteSuggestions.map((variable, variableIndex) => (
+                  <button
+                    key={`${variable.source}-${variable.key}`}
+                    type="button"
+                    className={`bf-advanced-formula-tool__search-autocomplete-option ${
+                      highlightedSearchIndex === variableIndex
+                        ? "bf-advanced-formula-tool__search-autocomplete-option--active"
+                        : ""
+                    }`}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      addVariable(variable);
+                    }}
+                  >
+                    <span>
+                      <strong>{getVariableDisplayLabel(variable)}</strong>
+                      <small>{variable.key}</small>
+                    </span>
+                    <strong>{formatValue(variable.value)}</strong>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </label>
+        ) : null}
 
         <div className="bf-advanced-formula-tool__quick-scroll-wrap">
           <div className="bf-advanced-formula-tool__quick-scroll">
-            {hasSearchQuery ? (
-              <>
-                <span className="bf-advanced-formula-tool__section-label">Search</span>
-
-                {searchedVariables.length === 0 ? (
-                  <span className="bf-advanced-formula-tool__quick-empty">No variables found</span>
-                ) : (
-                  searchedVariables.map((variable) => renderVariableChip(variable))
-                )}
-              </>
-            ) : (
-              <>
-                <span className="bf-advanced-formula-tool__section-label">Most Used</span>
-
-                {usedQuickVariables.length === 0 ? (
-                  <span className="bf-advanced-formula-tool__quick-empty">No variables used yet</span>
-                ) : (
-                  usedQuickVariables.map((variable) => renderVariableChip(variable))
-                )}
-
-                {remainingQuickVariables.length > 0 ? <span className="bf-advanced-formula-tool__section-divider" /> : null}
-
-                {remainingQuickVariables.map((variable) => renderVariableChip(variable))}
-              </>
-            )}
+              {hasSearchQuery ? (
+                <>
+                  <span className="bf-advanced-formula-tool__section-label">{dictionary.formula.search}</span>
+                  {searchedVariables.length === 0 ? (
+                    <span className="bf-advanced-formula-tool__quick-empty">{dictionary.formula.noVariables}</span>
+                  ) : (
+                    searchedVariables.map((variable) => renderVariableChip(variable))
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="bf-advanced-formula-tool__section-label">{dictionary.formula.mostUsed}</span>
+                  {usedQuickVariables.length === 0 ? (
+                    <span className="bf-advanced-formula-tool__quick-empty">{dictionary.formula.noVariablesUsed}</span>
+                  ) : (
+                    usedQuickVariables.map((variable) => renderVariableChip(variable))
+                  )}
+                  {remainingQuickVariables.length > 0 ? <span className="bf-advanced-formula-tool__section-divider" /> : null}
+                  {remainingQuickVariables.map((variable) => renderVariableChip(variable))}
+                </>
+              )}
           </div>
         </div>
       </div>
 
-      <div className="bf-advanced-formula-tool__label-row">
-        <span>Formula</span>
+      <div className="bf-advanced-formula-tool__label-row bf-advanced-formula-tool__label-row--formula">
+        <span>{dictionary.formula.formula}</span>
       </div>
 
       <div

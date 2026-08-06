@@ -1,20 +1,18 @@
-import type { JSX } from 'react';
+import type { CSSProperties, JSX } from 'react';
 import './RegistryTable.style.less';
 
 import { Fragment, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  Badge,
   Box,
   ButtonBase,
-  ClickAwayListener,
   Collapse,
   IconButton,
   InputAdornment,
   Menu,
   MenuItem,
   Paper,
-  Popover,
+  Popper,
   Snackbar,
   Stack,
   Table,
@@ -23,37 +21,49 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
 
 // Icons
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import DragIndicatorRoundedIcon from '@mui/icons-material/DragIndicatorRounded';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import RemoveIcon from '@mui/icons-material/Remove';
-import EditNoteIcon from '@mui/icons-material/EditNote';
-import EditIcon from '@mui/icons-material/Edit';
-import CheckIcon from '@mui/icons-material/Check';
-import CloseIcon from '@mui/icons-material/Close';
+import HorizontalRuleRoundedIcon from '@mui/icons-material/HorizontalRuleRounded';
+import TrendingDownRoundedIcon from '@mui/icons-material/TrendingDownRounded';
+import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RepeatIcon from '@mui/icons-material/Repeat';
+import EditRoundedIcon from '@mui/icons-material/EditRounded';
+import FormatAlignLeftRoundedIcon from '@mui/icons-material/FormatAlignLeftRounded';
+import FormatBoldRoundedIcon from '@mui/icons-material/FormatBoldRounded';
+import PaletteRoundedIcon from '@mui/icons-material/PaletteRounded';
 
 import { DragDropContext, Draggable, Droppable, type DropResult } from '@hello-pangea/dnd';
 
 import TotalSumOverview from '../TotalSumOverview/TotalSumOverview';
 import IconSelectorMenu from '../IconSelectorMenu/IconSelectorMenu';
 import GenericPopup from '../GenericPopup/GenericPopup';
+import GenericInput from '../GenericInput/GenericInput';
+import { evaluateNumericExpression } from '../GenericInput/GenericInput.utils';
+import RowComment from '../RowComment/RowComment';
+import TextConfigurationPopup from '../TextConfigurationPopup/TextConfigurationPopup';
+import { getReadableTextColor } from '../../utils/colorContrast';
+import { useLanguage } from '../../localization/useLanguage';
 
 import { ICON_OPTIONS, COLOR_PRESETS } from '../IconSelectorMenu/IconSelectorMenu.db';
+import { normalizeRegistryTableSettings } from './RegistryTable.types';
 
 import type { IconOption } from '../IconSelectorMenu/IconSelectorMenu.types';
+import type { FormulaVariable } from '../VariablesViewer/VariablesViewer';
 import type {
   Category,
   CurrencyOption,
   DecimalSeparator,
+  RegistryTableColumnKey,
+  RegistryTableColumnSettings,
+  RegistryTableSettings,
+  RegistryTableTextAlign,
+  RegistryTableTextSettings,
   RegistryRow,
   ToastState,
   TotalStep,
@@ -67,6 +77,12 @@ type Props = {
   rows: RegistryRow[];
   previousRows?: RegistryRow[];
   onChangeRows: (rows: RegistryRow[]) => void;
+  settings?: RegistryTableSettings;
+  onChangeSettings?: (settings: RegistryTableSettings) => void;
+  formulaVariables?: FormulaVariable[];
+  backgroundColor?: string | null;
+  contentColor?: string | null;
+  outerContentColor?: string | null;
 };
 
 const CURRENCIES: CurrencyOption[] = [
@@ -80,43 +96,9 @@ const PREVIEW_HEIGHT = 64;
 
 const createId = () => crypto.randomUUID();
 
-const getCurrencySymbol = (currency: CurrencyOption['code']) => {
-  const parts = new Intl.NumberFormat('pt-PT', { style: 'currency', currency }).formatToParts(0);
+const getCurrencySymbol = (currency: CurrencyOption['code'], locale: string) => {
+  const parts = new Intl.NumberFormat(locale, { style: 'currency', currency }).formatToParts(0);
   return parts.find((p) => p.type === 'currency')?.value ?? '';
-};
-
-const parseNumber = (value: string) => {
-  const cleanValue = value.trim();
-
-  if (!cleanValue) return null;
-
-  const isNegative = cleanValue.includes('-');
-  const sanitizedValue = cleanValue.replace(/[^\d.,]/g, '');
-  const lastCommaIndex = sanitizedValue.lastIndexOf(',');
-  const lastDotIndex = sanitizedValue.lastIndexOf('.');
-  const decimalIndex = Math.max(lastCommaIndex, lastDotIndex);
-
-  if (!sanitizedValue || sanitizedValue === ',' || sanitizedValue === '.') return null;
-
-  if (decimalIndex < 0) {
-    const integerValue = sanitizedValue.replace(/\D/g, '');
-    if (!integerValue) return null;
-
-    const normalizedInteger = `${isNegative ? '-' : ''}${integerValue}`;
-    const parsedInteger = Number(normalizedInteger);
-
-    return Number.isFinite(parsedInteger) ? parsedInteger : null;
-  }
-
-  const integerPart = sanitizedValue.slice(0, decimalIndex).replace(/\D/g, '');
-  const decimalPart = sanitizedValue.slice(decimalIndex + 1).replace(/\D/g, '');
-
-  if (!integerPart && !decimalPart) return null;
-
-  const normalizedValue = `${isNegative ? '-' : ''}${integerPart || '0'}${decimalPart ? `.${decimalPart}` : ''}`;
-  const parsedValue = Number(normalizedValue);
-
-  return Number.isFinite(parsedValue) ? parsedValue : null;
 };
 
 const toDisplayNumber = (value: number | null, separator: DecimalSeparator) => {
@@ -125,8 +107,8 @@ const toDisplayNumber = (value: number | null, separator: DecimalSeparator) => {
   return separator === ',' ? raw.replace('.', ',') : raw.replace(',', '.');
 };
 
-const formatCurrency = (value: number, currency: CurrencyOption['code'], separator: DecimalSeparator) => {
-  const formatted = new Intl.NumberFormat('pt-PT', {
+const formatCurrency = (value: number, currency: CurrencyOption['code'], separator: DecimalSeparator, locale: string) => {
+  const formatted = new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
     minimumFractionDigits: 2,
@@ -182,6 +164,150 @@ const getRowComparisonKey = (row: RegistryRow) => {
   return `${labelKey}::${iconKey}`;
 };
 
+const getColumnTextStyle = (settings: RegistryTableTextSettings): CSSProperties => ({
+  color: settings.color || undefined,
+  fontFamily: settings.fontFamily === 'inherit' ? undefined : settings.fontFamily,
+  fontSize: `${settings.fontSize}px`,
+  fontWeight: settings.bold ? 800 : 500,
+  fontStyle: settings.italic ? 'italic' : 'normal',
+  textDecoration: [settings.underline ? 'underline' : '', settings.strikethrough ? 'line-through' : '']
+    .filter(Boolean)
+    .join(' ') || 'none',
+  textAlign: settings.align,
+});
+
+const getCellAlignmentStyle = (align: RegistryTableTextAlign): CSSProperties => ({
+  justifyContent: align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center',
+  textAlign: align,
+});
+
+const ColumnHeader = ({
+  column,
+  settings,
+  highlighted,
+  onOpen,
+  onChangeHeader,
+  onToolMouseEnter,
+  onToolMouseLeave,
+  onColumnDragStart,
+  onColumnDragEnd,
+}: {
+  column: RegistryTableColumnKey;
+  settings: RegistryTableColumnSettings;
+  highlighted: boolean;
+  onOpen: (event: React.MouseEvent<HTMLElement>, column: RegistryTableColumnKey) => void;
+  onChangeHeader: (header: string) => void;
+  onToolMouseEnter: () => void;
+  onToolMouseLeave: () => void;
+  onColumnDragStart: (event: React.DragEvent<HTMLElement>, column: RegistryTableColumnKey) => void;
+  onColumnDragEnd: () => void;
+}) => {
+  const { activeLanguage } = useLanguage();
+  const dictionary = activeLanguage.dictionary;
+  const [headerElement, setHeaderElement] = useState<HTMLDivElement | null>(null);
+  const [editingHeader, setEditingHeader] = useState(false);
+  const [headerDraft, setHeaderDraft] = useState(settings.header);
+
+  const startHeaderEdit = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setHeaderDraft(settings.header);
+    setEditingHeader(true);
+  };
+
+  const finishHeaderEdit = () => {
+    const nextHeader = headerDraft.trim();
+
+    if (nextHeader) onChangeHeader(nextHeader);
+    setEditingHeader(false);
+  };
+
+  return (
+    <div
+      ref={setHeaderElement}
+      className={`bf-registry-table__column-header ${highlighted ? 'bf-registry-table__column-header--highlighted' : ''}`}
+    >
+      <div
+        className="bf-registry-table__column-title"
+        style={getCellAlignmentStyle(settings.headerStyle.align)}
+      >
+        {editingHeader ? (
+          <GenericInput
+            unstyled
+            value={headerDraft}
+            onChange={(event) => setHeaderDraft(event.target.value)}
+            onBlur={finishHeaderEdit}
+            onCommit={finishHeaderEdit}
+            onCancel={() => setEditingHeader(false)}
+            autoFocus
+            className="bf-registry-table__header-input"
+            aria-label={`${dictionary.table.editNameOf} ${settings.header}`}
+          />
+        ) : (
+          <span
+            className="bf-registry-table__column-label"
+            style={getColumnTextStyle(settings.headerStyle)}
+            onDoubleClick={startHeaderEdit}
+            title={dictionary.table.doubleClickEdit}
+          >
+            {settings.header}
+          </span>
+        )}
+
+        <Tooltip title={dictionary.table.editHeaderName} arrow>
+          <ButtonBase
+            className="bf-registry-table__header-edit"
+            onClick={startHeaderEdit}
+            aria-label={`${dictionary.table.editNameOf} ${settings.header}`}
+          >
+            <EditRoundedIcon fontSize="small" />
+          </ButtonBase>
+        </Tooltip>
+      </div>
+
+      <Tooltip title={dictionary.table.dragColumn} arrow>
+        <span
+          className="bf-registry-table__column-drag-tab"
+          role="button"
+          tabIndex={0}
+          draggable
+          onDragStart={(event) => onColumnDragStart(event, column)}
+          onDragEnd={onColumnDragEnd}
+          aria-label={`${dictionary.table.moveColumn} ${settings.header}`}
+        />
+      </Tooltip>
+
+      <Popper
+        open={highlighted}
+        anchorEl={headerElement}
+        placement="top"
+        popperOptions={{ strategy: 'fixed' }}
+        className="bf-registry-table__column-tools-popper"
+        modifiers={[{ name: 'offset', options: { offset: [0, 11] } }]}
+      >
+        <Tooltip title={dictionary.table.formatHeaderCells} arrow>
+          <ButtonBase
+            className="bf-registry-table__column-tools"
+            onClick={(event) => onOpen(event, column)}
+            onMouseEnter={onToolMouseEnter}
+            onMouseLeave={onToolMouseLeave}
+            aria-label={`${dictionary.table.format} ${settings.header || column}`}
+          >
+            <span className="bf-registry-table__column-tool-icon" aria-hidden="true">
+              <FormatAlignLeftRoundedIcon fontSize="small" />
+            </span>
+            <span className="bf-registry-table__column-tool-icon" aria-hidden="true">
+              <FormatBoldRoundedIcon fontSize="small" />
+            </span>
+            <span className="bf-registry-table__column-tool-icon" aria-hidden="true">
+              <PaletteRoundedIcon fontSize="small" />
+            </span>
+          </ButtonBase>
+        </Tooltip>
+      </Popper>
+    </div>
+  );
+};
+
 const HeaderPillButton = ({
   label,
   onClick,
@@ -230,185 +356,51 @@ const ComparisonCell = ({
   invert,
   currency,
   decimalSeparator,
+  locale,
+  textStyle,
 }: {
   amount: number | null;
   prevAmount: number | null;
   invert: boolean;
   currency: CurrencyOption['code'];
   decimalSeparator: DecimalSeparator;
+  locale: string;
+  textStyle?: CSSProperties;
 }) => {
   const meta = getComparison(amount, prevAmount, invert);
+  const justifyContent = textStyle?.textAlign === 'left' ? 'flex-start' : textStyle?.textAlign === 'right' ? 'flex-end' : 'center';
 
   if (meta.diff === null) {
     return (
-      <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ color: 'text.primary' }}>
-        <RemoveIcon fontSize="small" />
+      <Stack direction="row" spacing={1} alignItems="center" justifyContent={justifyContent} sx={{ color: 'text.primary' }} style={textStyle}>
+        <HorizontalRuleRoundedIcon fontSize="small" />
       </Stack>
     );
   }
 
   if (meta.state === 'up') {
     return (
-      <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ color: 'success.main' }}>
-        <ArrowUpwardIcon fontSize="small" />
-        <Typography variant="body2">{formatCurrency(meta.diff, currency, decimalSeparator)}</Typography>
+      <Stack direction="row" spacing={1} alignItems="center" justifyContent={justifyContent} sx={{ color: 'success.main' }} style={textStyle}>
+        <TrendingUpRoundedIcon fontSize="small" />
+        <Typography variant="body2" style={textStyle}>{formatCurrency(meta.diff, currency, decimalSeparator, locale)}</Typography>
       </Stack>
     );
   }
 
   if (meta.state === 'down') {
     return (
-      <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ color: 'error.main' }}>
-        <ArrowDownwardIcon fontSize="small" />
-        <Typography variant="body2">{formatCurrency(Math.abs(meta.diff), currency, decimalSeparator)}</Typography>
+      <Stack direction="row" spacing={1} alignItems="center" justifyContent={justifyContent} sx={{ color: 'error.main' }} style={textStyle}>
+        <TrendingDownRoundedIcon fontSize="small" />
+        <Typography variant="body2" style={textStyle}>{formatCurrency(Math.abs(meta.diff), currency, decimalSeparator, locale)}</Typography>
       </Stack>
     );
   }
 
   return (
-    <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ color: 'text.primary' }}>
-      <RemoveIcon fontSize="small" />
-      <Typography variant="body2">{formatCurrency(0, currency, decimalSeparator)}</Typography>
+    <Stack direction="row" spacing={1} alignItems="center" justifyContent={justifyContent} sx={{ color: 'text.primary' }} style={textStyle}>
+      <HorizontalRuleRoundedIcon fontSize="small" />
+      <Typography variant="body2" style={textStyle}>{formatCurrency(0, currency, decimalSeparator, locale)}</Typography>
     </Stack>
-  );
-};
-
-const NoteCell = ({ value, onSave }: { value: string; onSave: (nextValue: string) => void }) => {
-  const hasNote = value.trim().length > 0;
-  const badgeCount = hasNote ? 1 : 0;
-
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState(value);
-  const [tooltipOpen, setTooltipOpen] = useState(false);
-
-  const open = Boolean(anchorEl);
-
-  const openPopover = (target: HTMLElement) => {
-    setTooltipOpen(false);
-    setAnchorEl(target);
-    setDraft(value);
-    setIsEditing(false);
-  };
-
-  const closePopover = () => {
-    setAnchorEl(null);
-    setIsEditing(false);
-    setDraft(value);
-  };
-
-  const startEdit = () => {
-    setIsEditing(true);
-    setDraft(value);
-  };
-
-  const cancelEdit = () => {
-    setIsEditing(false);
-    setDraft(value);
-  };
-
-  const confirmEdit = () => {
-    onSave(draft.trim());
-    setIsEditing(false);
-    closePopover();
-  };
-
-  return (
-    <ClickAwayListener onClickAway={() => (open ? closePopover() : undefined)}>
-      <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span>
-          <Tooltip
-            title="Adicionar Comentário"
-            enterDelay={250}
-            disableInteractive
-            open={tooltipOpen && !open}
-            onOpen={() => setTooltipOpen(true)}
-            onClose={() => setTooltipOpen(false)}
-            disableHoverListener={open}
-            disableFocusListener={open}
-            disableTouchListener={open}
-          >
-            <Badge badgeContent={badgeCount} color={hasNote ? 'primary' : 'default'}>
-              <IconButton
-                size="small"
-                onClick={(event) => {
-                  setTooltipOpen(false);
-                  openPopover(event.currentTarget);
-                }}
-                className="bf-icon-btn"
-                sx={{
-                  color: hasNote ? 'primary.main' : 'text.secondary',
-                  opacity: hasNote ? 1 : 0.75,
-                  transition: 'opacity 120ms ease, color 120ms ease',
-                  '&:hover': { opacity: 1 },
-                }}
-              >
-                <EditNoteIcon fontSize="small" />
-              </IconButton>
-            </Badge>
-          </Tooltip>
-        </span>
-
-        <Popover
-          open={open}
-          anchorEl={anchorEl}
-          onClose={closePopover}
-          disableRestoreFocus
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-          PaperProps={{ sx: { p: 1.25, width: 320, borderRadius: 12 } }}
-        >
-          {!isEditing ? (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    opacity: hasNote ? 1 : 0.55,
-                    color: hasNote ? 'text.primary' : 'text.secondary',
-                  }}
-                >
-                  {hasNote ? value : 'Sem Comentários'}
-                </Typography>
-              </Box>
-
-              <IconButton size="small" onClick={startEdit} className="bf-icon-btn">
-                <EditIcon fontSize="small" />
-              </IconButton>
-            </Stack>
-          ) : (
-            <Stack spacing={1}>
-              <TextField
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') confirmEdit();
-                  if (event.key === 'Escape') cancelEdit();
-                }}
-                size="small"
-                fullWidth
-                autoFocus
-                multiline
-                minRows={2}
-                className="bf-registry-table__cell-input bf-registry-table__cell-input--compact"
-              />
-
-              <Stack direction="row" spacing={1} justifyContent="flex-end">
-                <IconButton size="small" onClick={confirmEdit} className="bf-icon-btn">
-                  <CheckIcon fontSize="small" />
-                </IconButton>
-
-                <IconButton size="small" onClick={cancelEdit} className="bf-icon-btn">
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </Stack>
-            </Stack>
-          )}
-        </Popover>
-      </Box>
-    </ClickAwayListener>
   );
 };
 
@@ -420,12 +412,32 @@ const RegistryTable = ({
   rows,
   previousRows = [],
   onChangeRows,
+  settings,
+  onChangeSettings,
+  formulaVariables = [],
+  backgroundColor,
+  contentColor,
+  outerContentColor,
 }: Props): JSX.Element => {
+  const { activeLanguage } = useLanguage();
+  const dictionary = activeLanguage.dictionary;
   const defaultRowColor = colorPresets[0] ?? '#1a73e8';
+  const tableSettings = useMemo(
+    () => normalizeRegistryTableSettings(settings, dictionary.table.columns),
+    [settings, dictionary.table.columns],
+  );
+  const visibleColumnOrder = tableSettings.columnOrder;
+  const backgroundIsGradient = Boolean(backgroundColor && /gradient\(/i.test(backgroundColor));
+  const resolvedTableContentColor = contentColor ?? getReadableTextColor(backgroundColor);
+  const resolvedOuterContentColor = outerContentColor ?? resolvedTableContentColor;
 
   const labelFocusRef = useRef<HTMLInputElement | null>(null);
 
-  const [editing, setEditing] = useState<{ rowId: string; field: 'label' | 'amount' } | null>(null);
+  const [editing, setEditing] = useState<{
+    rowId: string;
+    field: 'label' | 'amount' | 'customText' | 'customAmount';
+    column?: RegistryTableColumnKey;
+  } | null>(null);
   const [amountDraft, setAmountDraft] = useState('');
   const [currency, setCurrency] = useState<CurrencyOption['code']>('EUR');
   const [decimalSeparator, setDecimalSeparator] = useState<DecimalSeparator>(',');
@@ -435,6 +447,15 @@ const RegistryTable = ({
   const [previewRowId, setPreviewRowId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>({ open: false, message: '', severity: 'info' });
   const [rowIdPendingDelete, setRowIdPendingDelete] = useState<string | null>(null);
+  const [hoveredColumn, setHoveredColumn] = useState<RegistryTableColumnKey | null>(null);
+  const [textConfig, setTextConfig] = useState<{ anchorEl: HTMLElement; column: RegistryTableColumnKey } | null>(null);
+  const [draggedColumn, setDraggedColumn] = useState<RegistryTableColumnKey | null>(null);
+  const [columnDropPreview, setColumnDropPreview] = useState<{
+    column: RegistryTableColumnKey;
+    position: 'before' | 'after';
+  } | null>(null);
+  const [columnWidthPreview, setColumnWidthPreview] = useState<{ column: RegistryTableColumnKey; width: number } | null>(null);
+  const columnToolsCloseTimeoutRef = useRef<number | null>(null);
 
   const [categories, setCategories] = useState<Category[]>([
     { id: createId(), name: 'Salary', color: defaultRowColor },
@@ -442,11 +463,27 @@ const RegistryTable = ({
     { id: createId(), name: 'House', color: colorPresets[4] ?? '#a142f4' },
   ]);
 
-  const currencySymbol = useMemo(() => getCurrencySymbol(currency), [currency]);
+  const currencySymbol = useMemo(
+    () => getCurrencySymbol(currency, activeLanguage.locale),
+    [currency, activeLanguage.locale],
+  );
   const currencyLabel = useMemo(() => CURRENCIES.find((item) => item.code === currency)?.label ?? currency, [currency]);
 
   const totalSteps = useMemo(() => buildTotalSteps(rows), [rows]);
   const total = useMemo(() => (totalSteps.length ? totalSteps[totalSteps.length - 1].running : 0), [totalSteps]);
+  const functionalColumnWidth = tableSettings.showIcons ? 82 : 38;
+  const fixedColumnWidth = functionalColumnWidth + 220;
+  const tableWidth = useMemo(
+    () => fixedColumnWidth + visibleColumnOrder.reduce(
+      (width, column) => width + (columnWidthPreview?.column === column ? columnWidthPreview.width : tableSettings.columnWidths[column]),
+      0,
+    ),
+    [fixedColumnWidth, tableSettings, visibleColumnOrder, columnWidthPreview],
+  );
+  const minimumTableWidth = Math.max(
+    620,
+    functionalColumnWidth + 200 + visibleColumnOrder.length * 155,
+  );
 
   const previousAmountByKey = useMemo(() => {
     const amountByKey = new Map<string, number>();
@@ -473,12 +510,168 @@ const RegistryTable = ({
     onChangeRows(rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   };
 
+  const updateColumnSettings = (column: RegistryTableColumnKey, columnSettings: RegistryTableColumnSettings) => {
+    onChangeSettings?.({
+      ...tableSettings,
+      columns: {
+        ...tableSettings.columns,
+        [column]: columnSettings,
+      },
+    });
+  };
+
+  const updateTableSettings = (nextSettings: RegistryTableSettings) => {
+    onChangeSettings?.(nextSettings);
+  };
+
+  const getColumnWidth = (column: RegistryTableColumnKey) => {
+    if (columnWidthPreview?.column === column) return columnWidthPreview.width;
+    return tableSettings.columnWidths[column];
+  };
+
+  const getColumnLayoutWidth = (column: RegistryTableColumnKey) => {
+    if (tableWidth <= 0) return `${100 / Math.max(1, visibleColumnOrder.length)}%`;
+
+    return `${(getColumnWidth(column) / tableWidth) * 100}%`;
+  };
+
+  const getFixedColumnLayoutWidth = (width: number) => {
+    if (tableWidth <= 0) return width;
+
+    return `${(width / tableWidth) * 100}%`;
+  };
+
+  const startColumnDrag = (event: React.DragEvent<HTMLElement>, column: RegistryTableColumnKey) => {
+    event.stopPropagation();
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/bf-registry-column', column);
+    setDraggedColumn(column);
+    setColumnDropPreview(null);
+  };
+
+  const previewColumnDrop = (event: React.DragEvent<HTMLElement>, targetColumn: RegistryTableColumnKey) => {
+    if (!draggedColumn || draggedColumn === targetColumn) {
+      setColumnDropPreview(null);
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+
+    const targetRect = event.currentTarget.getBoundingClientRect();
+    const position = event.clientX < targetRect.left + targetRect.width / 2 ? 'before' : 'after';
+
+    setColumnDropPreview((currentPreview) =>
+      currentPreview?.column === targetColumn && currentPreview.position === position
+        ? currentPreview
+        : { column: targetColumn, position },
+    );
+  };
+
+  const dropColumn = (
+    event: React.DragEvent<HTMLElement>,
+    targetColumn: RegistryTableColumnKey,
+    position: 'before' | 'after',
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!draggedColumn || draggedColumn === targetColumn) {
+      setDraggedColumn(null);
+      setColumnDropPreview(null);
+      return;
+    }
+
+    const nextOrder = tableSettings.columnOrder.filter((column) => column !== draggedColumn);
+    const targetIndex = nextOrder.indexOf(targetColumn);
+
+    if (targetIndex < 0) return;
+
+    nextOrder.splice(position === 'after' ? targetIndex + 1 : targetIndex, 0, draggedColumn);
+
+    updateTableSettings({
+      ...tableSettings,
+      columnOrder: nextOrder,
+    });
+    setDraggedColumn(null);
+    setColumnDropPreview(null);
+  };
+
+  const startColumnResize = (event: React.MouseEvent<HTMLElement>, column: RegistryTableColumnKey) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const startX = event.clientX;
+    const startWidth = getColumnWidth(column);
+    const minimumWidth = column === 'icon' ? 58 : 120;
+    let nextWidth = startWidth;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      nextWidth = Math.max(minimumWidth, Math.min(520, startWidth + moveEvent.clientX - startX));
+      setColumnWidthPreview({ column, width: nextWidth });
+    };
+
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      setColumnWidthPreview(null);
+      updateTableSettings({
+        ...tableSettings,
+        columnWidths: {
+          ...tableSettings.columnWidths,
+          [column]: nextWidth,
+        },
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const resizeColumnByStep = (column: RegistryTableColumnKey, direction: -1 | 1) => {
+    const minimumWidth = column === 'icon' ? 58 : 120;
+    const nextWidth = Math.max(minimumWidth, Math.min(520, getColumnWidth(column) + direction * 20));
+
+    updateTableSettings({
+      ...tableSettings,
+      columnWidths: {
+        ...tableSettings.columnWidths,
+        [column]: nextWidth,
+      },
+    });
+  };
+
+  const showColumnTools = (column: RegistryTableColumnKey) => {
+    if (columnToolsCloseTimeoutRef.current) {
+      window.clearTimeout(columnToolsCloseTimeoutRef.current);
+      columnToolsCloseTimeoutRef.current = null;
+    }
+
+    setHoveredColumn(column);
+  };
+
+  const hideColumnTools = () => {
+    if (columnToolsCloseTimeoutRef.current) {
+      window.clearTimeout(columnToolsCloseTimeoutRef.current);
+    }
+
+    columnToolsCloseTimeoutRef.current = window.setTimeout(() => {
+      setHoveredColumn(null);
+      columnToolsCloseTimeoutRef.current = null;
+    }, 100);
+  };
+
+  const openTextConfiguration = (event: React.MouseEvent<HTMLElement>, column: RegistryTableColumnKey) => {
+    event.stopPropagation();
+    setTextConfig({ anchorEl: event.currentTarget, column });
+  };
+
   const startEdit = (rowId: string, field: 'label' | 'amount') => {
     setEditing({ rowId, field });
 
     if (field === 'amount') {
       const row = rows.find((currentRow) => currentRow.id === rowId);
-      setAmountDraft(toDisplayNumber(row?.amount ?? null, decimalSeparator));
+      setAmountDraft(row?.amountExpression?.trim() || toDisplayNumber(row?.amount ?? null, decimalSeparator));
     }
 
     if (field === 'label') {
@@ -489,15 +682,96 @@ const RegistryTable = ({
     }
   };
 
+  const startCustomEdit = (
+    row: RegistryRow,
+    column: RegistryTableColumnKey,
+    kind: 'text' | 'amount',
+  ) => {
+    setEditing({
+      rowId: row.id,
+      field: kind === 'amount' ? 'customAmount' : 'customText',
+      column,
+    });
+
+    if (kind === 'amount') {
+      const expression = row.customExpressions?.[column]?.trim();
+      const value = row.customValues?.[column];
+      setAmountDraft(expression || toDisplayNumber(typeof value === 'number' ? value : null, decimalSeparator));
+    }
+  };
+
   const stopEdit = () => {
     setEditing(null);
     setAmountDraft('');
   };
 
+  const commitAmountDraft = (rowId: string) => {
+    const expression = amountDraft.trim();
+
+    if (!expression) {
+      updateRow(rowId, { amount: null, amountExpression: undefined });
+      stopEdit();
+      return;
+    }
+
+    const evaluation = evaluateNumericExpression(expression, formulaVariables, dictionary.genericInput);
+
+    if (evaluation.value === null) {
+      showToast(evaluation.error ?? dictionary.table.invalidExpression, 'error');
+      stopEdit();
+      return;
+    }
+
+    updateRow(rowId, {
+      amount: evaluation.value,
+      amountExpression: /^[-+]?\d+(?:[.,]\d+)?$/.test(expression) ? undefined : expression,
+    });
+    stopEdit();
+  };
+
+  const commitCustomAmountDraft = (rowId: string, column: RegistryTableColumnKey) => {
+    const expression = amountDraft.trim();
+    const row = rows.find((currentRow) => currentRow.id === rowId);
+
+    if (!row) {
+      stopEdit();
+      return;
+    }
+
+    if (!expression) {
+      updateRow(rowId, {
+        customValues: { ...row.customValues, [column]: null },
+        customExpressions: { ...row.customExpressions, [column]: '' },
+      });
+      stopEdit();
+      return;
+    }
+
+    const evaluation = evaluateNumericExpression(expression, formulaVariables, dictionary.genericInput);
+
+    if (evaluation.value === null) {
+      showToast(evaluation.error ?? dictionary.table.invalidExpression, 'error');
+      stopEdit();
+      return;
+    }
+
+    updateRow(rowId, {
+      customValues: { ...row.customValues, [column]: evaluation.value },
+      customExpressions: {
+        ...row.customExpressions,
+        [column]: /^[-+]?\d+(?:[.,]\d+)?$/.test(expression) ? '' : expression,
+      },
+    });
+    stopEdit();
+  };
+
   const createEmptyRow = (defaultColor: string): RegistryRow => ({
     id: createId(),
-    label: 'New',
+    seriesId: createId(),
+    label: dictionary.table.newRow,
     amount: null,
+    customValues: {},
+    customExpressions: {},
     prevAmount: null,
     note: '',
     iconId: 'other',
@@ -516,7 +790,7 @@ const RegistryTable = ({
 
     setPreviewRowId(null);
     setEditing({ rowId: nextRow.id, field: 'label' });
-    showToast('Linha adicionada', 'success');
+    showToast(dictionary.table.rowAdded, 'success');
   };
 
   const requestRemoveRow = (id: string) => {
@@ -528,7 +802,7 @@ const RegistryTable = ({
 
     onChangeRows(rows.filter((row) => row.id !== rowIdPendingDelete));
     setRowIdPendingDelete(null);
-    showToast('Linha removida', 'info');
+    showToast(dictionary.table.rowRemoved, 'info');
   };
 
   const cancelRemoveRow = () => {
@@ -594,14 +868,88 @@ const RegistryTable = ({
     setCategories((currentCategories) => [next, ...currentCategories]);
   };
 
+  const renderColumnHeader = (column: RegistryTableColumnKey) => {
+    const columnSettings = tableSettings.columns[column];
+    const dropPosition = columnDropPreview?.column === column ? columnDropPreview.position : null;
+
+    return (
+      <TableCell
+        key={column}
+        width={getColumnLayoutWidth(column)}
+        align={columnSettings.headerStyle.align}
+        className={`bf-registry-table__column bf-registry-table__column--${column} ${
+          draggedColumn === column ? 'bf-registry-table__column--dragging' : ''
+        } ${dropPosition ? `bf-registry-table__column--drop-${dropPosition}` : ''}`}
+        style={{
+          background: columnSettings.backgroundColor || undefined,
+          color:
+            columnSettings.headerStyle.color ||
+            (columnSettings.backgroundColor ? getReadableTextColor(columnSettings.backgroundColor) : resolvedTableContentColor),
+          '--bf-registry-column-content':
+            columnSettings.headerStyle.color ||
+            (columnSettings.backgroundColor ? getReadableTextColor(columnSettings.backgroundColor) : resolvedTableContentColor),
+        } as CSSProperties}
+        onMouseEnter={() => showColumnTools(column)}
+        onFocus={() => showColumnTools(column)}
+        onDragOver={(event) => previewColumnDrop(event, column)}
+        onDragLeave={(event) => {
+          if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+          if (columnDropPreview?.column === column) setColumnDropPreview(null);
+        }}
+        onDrop={(event) => dropColumn(event, column, dropPosition ?? 'before')}
+      >
+        <ColumnHeader
+          column={column}
+          settings={columnSettings}
+          highlighted={hoveredColumn === column || textConfig?.column === column}
+          onOpen={openTextConfiguration}
+          onChangeHeader={(header) => updateColumnSettings(column, { ...columnSettings, header })}
+          onToolMouseEnter={() => showColumnTools(column)}
+          onToolMouseLeave={hideColumnTools}
+          onColumnDragStart={startColumnDrag}
+          onColumnDragEnd={() => {
+            setDraggedColumn(null);
+            setColumnDropPreview(null);
+          }}
+        />
+
+        <span
+          className="bf-registry-table__column-resize-handle"
+          role="separator"
+          tabIndex={0}
+          aria-orientation="vertical"
+          aria-label={`${dictionary.table.resizeColumn} ${columnSettings.header}`}
+          onMouseDown={(event) => startColumnResize(event, column)}
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+            event.preventDefault();
+            resizeColumnByStep(column, event.key === 'ArrowLeft' ? -1 : 1);
+          }}
+        />
+      </TableCell>
+    );
+  };
+
   return (
-    <section className="bf-registry-table">
+    <section
+      className="bf-registry-table"
+      style={
+        {
+          '--bf-registry-surface': backgroundColor || 'color-mix(in srgb, var(--bf-surface-bg) 92%, transparent)',
+          '--bf-registry-header-bg': backgroundIsGradient
+            ? 'transparent'
+            : 'color-mix(in srgb, var(--bf-registry-surface, var(--bf-surface-bg)) 94%, transparent)',
+          '--bf-registry-content': resolvedOuterContentColor,
+          '--bf-registry-table-content': resolvedTableContentColor,
+        } as CSSProperties
+      }
+    >
       <Stack direction="row" alignItems="center" justifyContent="space-between" className="bf-registry-table__header">
         <Stack direction="row" spacing={1} alignItems="center" className="bf-registry-table__header-right">
-          <TotalSumOverview title="Soma" steps={totalSteps} total={total} formatValue={(value) => formatCurrency(value, currency, decimalSeparator)} />
+          <TotalSumOverview title={dictionary.table.sum} steps={totalSteps} total={total} formatValue={(value) => formatCurrency(value, currency, decimalSeparator, activeLanguage.locale)} />
 
           <Typography variant="body1" fontWeight={600}>
-            Total: {formatCurrency(total, currency, decimalSeparator)}
+            {dictionary.table.total}: {formatCurrency(total, currency, decimalSeparator, activeLanguage.locale)}
           </Typography>
         </Stack>
       </Stack>
@@ -610,24 +958,31 @@ const RegistryTable = ({
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId={`${title}-table`}>
             {(droppableProvided) => (
-              <Table ref={droppableProvided.innerRef} {...droppableProvided.droppableProps} size="small">
+              <Table
+                ref={droppableProvided.innerRef}
+                {...droppableProvided.droppableProps}
+                size="small"
+                className="bf-registry-table__table"
+                style={{ width: '100%', minWidth: minimumTableWidth, tableLayout: 'fixed' }}
+                onMouseLeave={hideColumnTools}
+              >
+                <colgroup>
+                  <col style={{ width: getFixedColumnLayoutWidth(functionalColumnWidth) }} />
+                  {visibleColumnOrder.map((column) => (
+                    <col key={column} style={{ width: getColumnLayoutWidth(column) }} />
+                  ))}
+                  <col style={{ width: getFixedColumnLayoutWidth(220) }} />
+                </colgroup>
+
                 <TableHead>
                   <TableRow>
-                    <TableCell width={44} align="center" />
-                    <TableCell width={64} align="center">
-                      Icon
-                    </TableCell>
-                    <TableCell width={260}>Descrição</TableCell>
-                    <TableCell width={220} align="center">
-                      Este mês
-                    </TableCell>
-                    <TableCell width={220} align="center">
-                      Mês anterior
-                    </TableCell>
-                    <TableCell width={200} align="center">
-                      Diferença
-                    </TableCell>
-                    <TableCell width={220} align="center">
+                    <TableCell
+                      width={getFixedColumnLayoutWidth(functionalColumnWidth)}
+                      align="center"
+                      className="bf-registry-table__drag-column"
+                    />
+                    {visibleColumnOrder.map(renderColumnHeader)}
+                    <TableCell width={getFixedColumnLayoutWidth(220)} align="center">
                       <div className="bf-registry-table__header-pills bf-registry-table__header-pills--controls">
                         <div className="bf-registry-table__header-controls">
                           <Tooltip title={currencyLabel}>
@@ -636,7 +991,7 @@ const RegistryTable = ({
                             </Box>
                           </Tooltip>
 
-                          <Tooltip title="Separador decimal">
+                          <Tooltip title={dictionary.table.decimalSeparator}>
                             <Box>
                               <HeaderPillButton
                                 label={decimalSeparator === ',' ? '1,23' : '1.23'}
@@ -653,19 +1008,19 @@ const RegistryTable = ({
                 <TableBody>
                   {rows.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} align="center" className="bf-registry-table__empty-cell">
+                      <TableCell colSpan={visibleColumnOrder.length + 2} align="center" className="bf-registry-table__empty-cell">
                         <div className="bf-registry-table__empty-state">
                           <Typography variant="body2" className="bf-registry-table__empty-title">
-                            Ainda não há dados nesta tabela.
+                            {dictionary.table.emptyTitle}
                           </Typography>
 
                           <Typography variant="caption" className="bf-registry-table__empty-description">
-                            Adiciona a primeira linha para começar a preencher {title.toLowerCase()}.
+                            {dictionary.table.emptyDescriptionPrefix} {title.toLowerCase()}.
                           </Typography>
 
                           <ButtonBase className="bf-pill bf-registry-table__empty-action" onClick={() => insertRowAt(0)}>
                             <AddCircleOutlineIcon fontSize="small" />
-                            <span>Adicionar primeira linha</span>
+                            <span>{dictionary.table.addFirstRow}</span>
                           </ButtonBase>
                         </div>
                       </TableCell>
@@ -673,9 +1028,253 @@ const RegistryTable = ({
                   ) : null}
 
                   {rows.map((row, index) => {
-                    const rowBg = row.recurring ? 'rgba(26,115,232,0.10)' : 'inherit';
+                    const rowBg = 'color-mix(in srgb, var(--bf-primary) 7%, transparent)';
                     const isEditingRow = editing?.rowId === row.id;
                     const previousAmount = previousAmountByKey.get(getRowComparisonKey(row)) ?? null;
+
+                    const renderRowColumn = (column: RegistryTableColumnKey) => {
+                      const columnSettings = tableSettings.columns[column];
+                      const isDropTarget = columnDropPreview?.column === column;
+                      const cellProps = {
+                        align: columnSettings.cellStyle.align,
+                        className: `bf-registry-table__column bf-registry-table__column--${column} ${
+                          isDropTarget ? 'bf-registry-table__column--drop-target' : ''
+                        }`,
+                        onMouseEnter: () => showColumnTools(column),
+                        style: {
+                          background: columnSettings.backgroundColor || undefined,
+                          color:
+                            columnSettings.cellStyle.color ||
+                            (columnSettings.backgroundColor
+                              ? getReadableTextColor(columnSettings.backgroundColor)
+                              : resolvedTableContentColor),
+                          '--bf-registry-column-content':
+                            columnSettings.cellStyle.color ||
+                            (columnSettings.backgroundColor
+                              ? getReadableTextColor(columnSettings.backgroundColor)
+                              : resolvedTableContentColor),
+                        } as CSSProperties,
+                      } as const;
+
+                      if (column === 'description') {
+                        return (
+                          <TableCell key={column} {...cellProps}>
+                            {isEditingRow && editing?.field === 'label' ? (
+                              <GenericInput
+                                value={row.label}
+                                onChange={(event) => updateRow(row.id, { label: event.target.value })}
+                                onBlur={stopEdit}
+                                onCommit={stopEdit}
+                                onCancel={stopEdit}
+                                size="small"
+                                fullWidth
+                                placeholder={dictionary.table.examplePaycheck}
+                                inputProps={{ style: getColumnTextStyle(columnSettings.cellStyle) }}
+                                inputRef={(element) => {
+                                  labelFocusRef.current = element;
+                                }}
+                                autoFocus
+                                className="bf-registry-table__cell-input"
+                              />
+                            ) : (
+                              <div
+                                className="bf-cell"
+                                onClick={() => startEdit(row.id, 'label')}
+                                style={getCellAlignmentStyle(columnSettings.cellStyle.align)}
+                              >
+                                <Typography variant="body2" style={getColumnTextStyle(columnSettings.cellStyle)}>
+                                  {(row.label || '').trim() ? row.label : <span className="bf-cell__placeholder">{dictionary.table.examplePaycheck}</span>}
+                                </Typography>
+                              </div>
+                            )}
+                          </TableCell>
+                        );
+                      }
+
+                      if (column === 'current') {
+                        return (
+                          <TableCell key={column} {...cellProps}>
+                            {isEditingRow && editing?.field === 'amount' ? (
+                              <GenericInput
+                                value={amountDraft}
+                                onValueChange={setAmountDraft}
+                                onBlur={() => commitAmountDraft(row.id)}
+                                allowCalculations
+                                formulaVariables={formulaVariables}
+                                decimalSeparator={decimalSeparator}
+                                onCalculation={(value, displayValue, expression) => {
+                                  setAmountDraft(displayValue);
+                                  const cleanExpression = expression.trim();
+                                  updateRow(row.id, {
+                                    amount: value,
+                                    amountExpression: /^[-+]?\d+(?:[.,]\d+)?$/.test(cleanExpression)
+                                      ? undefined
+                                      : cleanExpression,
+                                  });
+                                }}
+                                onCommit={stopEdit}
+                                onCancel={stopEdit}
+                                size="small"
+                                fullWidth
+                                inputMode={formulaVariables.length > 0 ? 'text' : 'decimal'}
+                                placeholder={dictionary.table.exampleFormula}
+                                inputProps={{ style: getColumnTextStyle(columnSettings.cellStyle) }}
+                                InputProps={{
+                                  startAdornment: <InputAdornment position="start">{currencySymbol}</InputAdornment>,
+                                }}
+                                autoFocus
+                                className="bf-registry-table__cell-input"
+                              />
+                            ) : (
+                              <div
+                                className={`bf-cell ${row.amountExpression ? 'bf-cell--formula' : ''}`}
+                                onClick={() => startEdit(row.id, 'amount')}
+                                style={getCellAlignmentStyle(columnSettings.cellStyle.align)}
+                                title={row.amountExpression ? `fx ${row.amountExpression}` : undefined}
+                              >
+                                {row.amountExpression ? <span className="bf-registry-table__formula-mark">fx</span> : null}
+                                <Typography variant="body2" style={getColumnTextStyle(columnSettings.cellStyle)}>
+                                  {row.amount === null ? (
+                                    <span className="bf-cell__placeholder">{currencySymbol} 0</span>
+                                  ) : (
+                                    formatCurrency(row.amount, currency, decimalSeparator, activeLanguage.locale)
+                                  )}
+                                </Typography>
+                              </div>
+                            )}
+                          </TableCell>
+                        );
+                      }
+
+                      if (column === 'previous') {
+                        return (
+                          <TableCell key={column} {...cellProps}>
+                            <div className="bf-cell bf-cell--readonly" style={getCellAlignmentStyle(columnSettings.cellStyle.align)}>
+                              <Typography variant="body2" style={getColumnTextStyle(columnSettings.cellStyle)}>
+                                {previousAmount === null ? (
+                                  <span className="bf-cell__placeholder">{currencySymbol} 0</span>
+                                ) : (
+                                  formatCurrency(previousAmount, currency, decimalSeparator, activeLanguage.locale)
+                                )}
+                              </Typography>
+                            </div>
+                          </TableCell>
+                        );
+                      }
+
+                      if (columnSettings.kind === 'text') {
+                        const value = String(row.customValues?.[column] ?? '');
+                        const isEditingCell = isEditingRow && editing?.field === 'customText' && editing.column === column;
+
+                        return (
+                          <TableCell key={column} {...cellProps}>
+                            {isEditingCell ? (
+                              <GenericInput
+                                value={value}
+                                onValueChange={(nextValue) =>
+                                  updateRow(row.id, {
+                                    customValues: { ...row.customValues, [column]: nextValue },
+                                  })
+                                }
+                                onBlur={stopEdit}
+                                onCommit={stopEdit}
+                                onCancel={stopEdit}
+                                size="small"
+                                fullWidth
+                                placeholder={dictionary.table.write}
+                                inputProps={{ style: getColumnTextStyle(columnSettings.cellStyle) }}
+                                autoFocus
+                                className="bf-registry-table__cell-input"
+                              />
+                            ) : (
+                              <div
+                                className="bf-cell"
+                                onClick={() => startCustomEdit(row, column, 'text')}
+                                style={getCellAlignmentStyle(columnSettings.cellStyle.align)}
+                              >
+                                <Typography variant="body2" style={getColumnTextStyle(columnSettings.cellStyle)}>
+                                  {value.trim() ? value : <span className="bf-cell__placeholder">—</span>}
+                                </Typography>
+                              </div>
+                            )}
+                          </TableCell>
+                        );
+                      }
+
+                      if (columnSettings.kind === 'amount') {
+                        const value = row.customValues?.[column];
+                        const numericValue = typeof value === 'number' ? value : null;
+                        const expression = row.customExpressions?.[column]?.trim();
+                        const isEditingCell = isEditingRow && editing?.field === 'customAmount' && editing.column === column;
+
+                        return (
+                          <TableCell key={column} {...cellProps}>
+                            {isEditingCell ? (
+                              <GenericInput
+                                value={amountDraft}
+                                onValueChange={setAmountDraft}
+                                onBlur={() => commitCustomAmountDraft(row.id, column)}
+                                allowCalculations
+                                formulaVariables={formulaVariables}
+                                decimalSeparator={decimalSeparator}
+                                onCalculation={(nextValue, displayValue, nextExpression) => {
+                                  setAmountDraft(displayValue);
+                                  updateRow(row.id, {
+                                    customValues: { ...row.customValues, [column]: nextValue },
+                                    customExpressions: {
+                                      ...row.customExpressions,
+                                      [column]: /^[-+]?\d+(?:[.,]\d+)?$/.test(nextExpression.trim()) ? '' : nextExpression.trim(),
+                                    },
+                                  });
+                                }}
+                                onCommit={stopEdit}
+                                onCancel={stopEdit}
+                                size="small"
+                                fullWidth
+                                inputMode={formulaVariables.length > 0 ? 'text' : 'decimal'}
+                                placeholder={dictionary.table.exampleFormula}
+                                inputProps={{ style: getColumnTextStyle(columnSettings.cellStyle) }}
+                                InputProps={{
+                                  startAdornment: <InputAdornment position="start">{currencySymbol}</InputAdornment>,
+                                }}
+                                autoFocus
+                                className="bf-registry-table__cell-input"
+                              />
+                            ) : (
+                              <div
+                                className={`bf-cell ${expression ? 'bf-cell--formula' : ''}`}
+                                onClick={() => startCustomEdit(row, column, 'amount')}
+                                style={getCellAlignmentStyle(columnSettings.cellStyle.align)}
+                                title={expression ? `fx ${expression}` : undefined}
+                              >
+                                {expression ? <span className="bf-registry-table__formula-mark">fx</span> : null}
+                                <Typography variant="body2" style={getColumnTextStyle(columnSettings.cellStyle)}>
+                                  {numericValue === null ? (
+                                    <span className="bf-cell__placeholder">{currencySymbol} 0</span>
+                                  ) : (
+                                    formatCurrency(numericValue, currency, decimalSeparator, activeLanguage.locale)
+                                  )}
+                                </Typography>
+                              </div>
+                            )}
+                          </TableCell>
+                        );
+                      }
+
+                      return (
+                        <TableCell key={column} {...cellProps}>
+                          <ComparisonCell
+                            amount={row.amount}
+                            prevAmount={previousAmount}
+                            invert={invertComparison}
+                            currency={currency}
+                            decimalSeparator={decimalSeparator}
+                            locale={activeLanguage.locale}
+                            textStyle={getColumnTextStyle(columnSettings.cellStyle)}
+                          />
+                        </TableCell>
+                      );
+                    };
 
                     return (
                       <Fragment key={row.id}>
@@ -689,120 +1288,42 @@ const RegistryTable = ({
                               }}
                               className={isEditingRow ? 'bf-row--active' : undefined}
                             >
-                              <TableCell align="center">
-                                <Tooltip title="Arrastar para reordenar" enterDelay={250}>
-                                  <span {...draggableProvided.dragHandleProps} className="bf-registry-table__drag-handle">
-                                    <DragIndicatorIcon fontSize="small" />
-                                  </span>
-                                </Tooltip>
-                              </TableCell>
+                              <TableCell
+                                align="center"
+                                className={`bf-registry-table__drag-column ${
+                                  tableSettings.showIcons ? 'bf-registry-table__drag-column--with-icon' : ''
+                                }`}
+                              >
+                                <div className="bf-registry-table__row-identity">
+                                  <Tooltip title={dictionary.table.dragToReorder} enterDelay={250}>
+                                    <span {...draggableProvided.dragHandleProps} className="bf-registry-table__drag-handle">
+                                      <DragIndicatorRoundedIcon fontSize="small" />
+                                    </span>
+                                  </Tooltip>
 
-                              <TableCell align="center">
-                                <Tooltip title="Customizar" enterDelay={250}>
-                                  <ButtonBase
-                                    onClick={(event) => setRowEditor({ el: event.currentTarget, rowId: row.id })}
-                                    className="bf-registry-table__icon-btn"
-                                    sx={{
-                                      backgroundColor: `${row.color}22`,
-                                      border: `1px solid ${row.color}55`,
-                                      color: row.color,
-                                      '& svg': {
-                                        color: row.color,
-                                        fill: 'currentColor',
-                                      },
-                                    }}
-                                  >
-                                    {renderRowIcon(row)}
-                                  </ButtonBase>
-                                </Tooltip>
-                              </TableCell>
-
-                              <TableCell align="center">
-                                {isEditingRow && editing?.field === 'label' ? (
-                                  <TextField
-                                    value={row.label}
-                                    onChange={(event) => updateRow(row.id, { label: event.target.value })}
-                                    onBlur={stopEdit}
-                                    onKeyDown={(event) => {
-                                      if (event.key === 'Enter' || event.key === 'Escape') stopEdit();
-                                    }}
-                                    size="small"
-                                    fullWidth
-                                    placeholder="Ex: Paycheck"
-                                    inputProps={{ style: { textAlign: 'left' } }}
-                                    inputRef={(element) => {
-                                      labelFocusRef.current = element;
-                                    }}
-                                    autoFocus
-                                    className="bf-registry-table__cell-input"
-                                  />
-                                ) : (
-                                  <div className="bf-cell" onClick={() => startEdit(row.id, 'label')}>
-                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                      {(row.label || '').trim() ? row.label : <span className="bf-cell__placeholder">Ex: Paycheck</span>}
-                                    </Typography>
-                                  </div>
-                                )}
-                              </TableCell>
-
-                              <TableCell align="center">
-                                {isEditingRow && editing?.field === 'amount' ? (
-                                  <TextField
-                                    value={amountDraft}
-                                    onChange={(event) => {
-                                      const nextDraft = event.target.value;
-
-                                      setAmountDraft(nextDraft);
-                                      updateRow(row.id, { amount: parseNumber(nextDraft) });
-                                    }}
-                                    onBlur={stopEdit}
-                                    onKeyDown={(event) => {
-                                      if (event.key === 'Enter' || event.key === 'Escape') stopEdit();
-                                    }}
-                                    size="small"
-                                    fullWidth
-                                    inputMode="decimal"
-                                    inputProps={{ style: { textAlign: 'left' } }}
-                                    InputProps={{
-                                      startAdornment: <InputAdornment position="start">{currencySymbol}</InputAdornment>,
-                                    }}
-                                    autoFocus
-                                    className="bf-registry-table__cell-input"
-                                  />
-                                ) : (
-                                  <div className="bf-cell" onClick={() => startEdit(row.id, 'amount')}>
-                                    <Typography variant="body2" sx={{ fontWeight: 800 }}>
-                                      {row.amount === null ? (
-                                        <span className="bf-cell__placeholder">{currencySymbol} 0</span>
-                                      ) : (
-                                        formatCurrency(row.amount, currency, decimalSeparator)
-                                      )}
-                                    </Typography>
-                                  </div>
-                                )}
-                              </TableCell>
-
-                              <TableCell align="center">
-                                <div className="bf-cell bf-cell--readonly">
-                                  <Typography variant="body2" sx={{ fontWeight: 800 }}>
-                                    {previousAmount === null ? (
-                                      <span className="bf-cell__placeholder">{currencySymbol} 0</span>
-                                    ) : (
-                                      formatCurrency(previousAmount, currency, decimalSeparator)
-                                    )}
-                                  </Typography>
+                                  {tableSettings.showIcons ? (
+                                    <Tooltip title={dictionary.table.customizeIcon} enterDelay={250}>
+                                      <ButtonBase
+                                        onClick={(event) => setRowEditor({ el: event.currentTarget, rowId: row.id })}
+                                        className="bf-registry-table__icon-btn"
+                                        sx={{
+                                          backgroundColor: `${row.color}22`,
+                                          border: `1px solid ${row.color}55`,
+                                          color: row.color,
+                                          '& svg': {
+                                            color: row.color,
+                                            fill: 'currentColor',
+                                          },
+                                        }}
+                                      >
+                                        {renderRowIcon(row)}
+                                      </ButtonBase>
+                                    </Tooltip>
+                                  ) : null}
                                 </div>
                               </TableCell>
 
-                              <TableCell align="center">
-                                <ComparisonCell
-                                  amount={row.amount}
-                                  prevAmount={previousAmount}
-                                  invert={invertComparison}
-                                  currency={currency}
-                                  decimalSeparator={decimalSeparator}
-                                />
-                              </TableCell>
+                              {visibleColumnOrder.map(renderRowColumn)}
 
                               <TableCell align="center" className="bf-registry-table__actions">
                                 <div className="bf-registry-table__actions-inner">
@@ -811,14 +1332,14 @@ const RegistryTable = ({
                                     onMouseEnter={() => setPreviewRowId(row.id)}
                                     onMouseLeave={() => setPreviewRowId((currentPreviewRowId) => (currentPreviewRowId === row.id ? null : currentPreviewRowId))}
                                   >
-                                    <Tooltip title="Adicionar nova linha abaixo" enterDelay={250}>
+                                    <Tooltip title={dictionary.table.addRowBelow} enterDelay={250}>
                                       <IconButton size="small" onClick={() => insertRowAt(index + 1)} className="bf-icon-btn">
                                         <AddCircleOutlineIcon fontSize="small" />
                                       </IconButton>
                                     </Tooltip>
                                   </Box>
 
-                                  <Tooltip title="Repetir nos próximos meses" enterDelay={250}>
+                                  <Tooltip title={dictionary.table.repeatNextMonths} enterDelay={250}>
                                     <IconButton
                                       size="small"
                                       onClick={() => updateRow(row.id, { recurring: !row.recurring })}
@@ -834,9 +1355,14 @@ const RegistryTable = ({
                                     </IconButton>
                                   </Tooltip>
 
-                                  <NoteCell value={row.note} onSave={(nextValue) => updateRow(row.id, { note: nextValue })} />
+                                  <RowComment
+                                    value={row.note}
+                                    rowLabel={row.label}
+                                    color={row.color}
+                                    onSave={(nextValue) => updateRow(row.id, { note: nextValue })}
+                                  />
 
-                                  <Tooltip title="Apagar linha" enterDelay={250} onClose={() => {}}>
+                                  <Tooltip title={dictionary.table.deleteRow} enterDelay={250} onClose={() => {}}>
                                     <IconButton onClick={() => requestRemoveRow(row.id)} size="small" className="bf-icon-btn">
                                       <DeleteOutlineIcon fontSize="small" />
                                     </IconButton>
@@ -862,13 +1388,25 @@ const RegistryTable = ({
 
       <GenericPopup
         open={Boolean(rowPendingDelete)}
-        title="Apagar linha?"
-        description={`Isto vai apagar permanentemente ${rowPendingDelete?.label?.trim() || 'esta linha'}.`}
-        confirmLabel="Apagar"
-        cancelLabel="Cancelar"
+        title={dictionary.table.deleteRowTitle}
+        description={`${dictionary.table.deleteRowPrefix} ${rowPendingDelete?.label?.trim() || dictionary.table.thisRow}.`}
+        confirmLabel={dictionary.common.delete}
+        cancelLabel={dictionary.common.cancel}
         variant="danger"
         onConfirm={confirmRemoveRow}
         onCancel={cancelRemoveRow}
+      />
+
+      <TextConfigurationPopup
+        anchorEl={textConfig?.anchorEl ?? null}
+        column={textConfig?.column ?? null}
+        settings={textConfig ? tableSettings.columns[textConfig.column] : null}
+        colorPresets={colorPresets}
+        onChange={(columnSettings) => {
+          if (!textConfig) return;
+          updateColumnSettings(textConfig.column, columnSettings);
+        }}
+        onClose={() => setTextConfig(null)}
       />
 
       <Menu anchorEl={currencyAnchor} open={Boolean(currencyAnchor)} onClose={() => setCurrencyAnchor(null)}>
@@ -894,7 +1432,7 @@ const RegistryTable = ({
             setDecimalAnchor(null);
           }}
         >
-          Vírgula (1,23)
+          {dictionary.table.decimalComma}
         </MenuItem>
 
         <MenuItem
@@ -904,7 +1442,7 @@ const RegistryTable = ({
             setDecimalAnchor(null);
           }}
         >
-          Ponto (1.23)
+          {dictionary.table.decimalPoint}
         </MenuItem>
       </Menu>
 

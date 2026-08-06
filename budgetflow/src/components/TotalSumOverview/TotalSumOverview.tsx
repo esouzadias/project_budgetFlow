@@ -13,6 +13,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import type { TotalStep } from '../RegistryTable/RegistryTable.types';
+import { useLanguage } from '../../localization/useLanguage';
 
 type Props = {
   title: string;
@@ -22,13 +23,15 @@ type Props = {
 };
 
 export default function TotalSumOverview({ title, steps, total, formatValue }: Props) {
+  const { activeLanguage } = useLanguage();
+  const dictionary = activeLanguage.dictionary;
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
   const totalLabel = useMemo(() => formatValue(total), [formatValue, total]);
 
   return (
     <>
-      <Tooltip title="Ver cálculo">
+      <Tooltip title={dictionary.table.viewCalculation}>
         <IconButton size="small" onClick={(e) => setAnchorEl(e.currentTarget)}>
           <FunctionsIcon fontSize="small" />
         </IconButton>
@@ -77,6 +80,8 @@ function TotalPager({
   totalLabel: string;
   formatValue: (value: number) => string;
 }) {
+  const { activeLanguage } = useLanguage();
+  const dictionary = activeLanguage.dictionary;
   const stepsPerPage = 3;
   const totalPages = Math.max(1, Math.ceil(steps.length / stepsPerPage));
   const [page, setPage] = useState(0);
@@ -93,7 +98,7 @@ function TotalPager({
     <Stack spacing={1}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Typography variant="caption" sx={{ opacity: 0.75 }}>
-          {steps.length ? `Etapas ${start + 1}-${end} de ${steps.length}` : '—'}
+          {steps.length ? `${dictionary.table.stages} ${start + 1}-${end} / ${steps.length}` : '—'}
         </Typography>
 
         <Stack direction="row" spacing={0.5} alignItems="center">
@@ -169,7 +174,7 @@ function TotalPager({
         }}
       >
         <Typography variant="body2" sx={{ opacity: 0.9 }}>
-          Resultado
+          {dictionary.table.result}
         </Typography>
         <Typography variant="body2" fontWeight={900}>
           {totalLabel}

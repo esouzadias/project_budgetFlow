@@ -11,24 +11,29 @@
     #dashboard-grid {
       position: relative;
       display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(12, minmax(0, 1fr));
       gap: 12px;
       align-items: stretch;
 
       &.bf-dashboard-grid--dragging {
         padding-bottom: 340px;
       }
+
+      &.bf-dashboard-grid--resizing {
+        cursor: ew-resize;
+        user-select: none;
+      }
     }
   }
 }
 
 .bf-dashboard-grid__block {
+  position: relative;
+  grid-column: span var(--bf-dashboard-span, 6);
   min-width: 0;
   min-height: 320px;
-  transition:
-    grid-column 260ms ease-in-out,
-    transform 260ms ease-in-out,
-    opacity 160ms ease;
+  transform-origin: top left;
+  transition: opacity 160ms ease;
   will-change: transform;
 
   .bf-ddc {
@@ -44,8 +49,62 @@
     overflow: auto;
   }
 
-  .MuiTable-root {
-    min-width: 880px;
+}
+
+.bf-dashboard-grid__resize-handle {
+  position: absolute;
+  top: 50%;
+  right: -7px;
+  z-index: 18;
+  width: 15px;
+  height: 86px;
+  border-radius: var(--bf-radius-pill);
+  opacity: 0;
+  outline: none;
+  cursor: ew-resize;
+  transform: translateY(-50%) scaleY(0.78);
+  transition:
+    opacity var(--bf-fast) var(--bf-ease),
+    transform var(--bf-fast) var(--bf-ease);
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    right: 5px;
+    bottom: 8px;
+    width: 4px;
+    border: 1px solid color-mix(in srgb, var(--bf-primary) 34%, var(--bf-border));
+    border-radius: var(--bf-radius-pill);
+    background: color-mix(in srgb, var(--bf-surface-bg) 96%, transparent);
+    box-shadow: var(--bf-shadow-1);
+    transition:
+      width var(--bf-fast) var(--bf-ease),
+      right var(--bf-fast) var(--bf-ease),
+      border-color var(--bf-fast) var(--bf-ease),
+      background-color var(--bf-fast) var(--bf-ease);
+  }
+
+  &:hover,
+  &:focus-visible {
+    opacity: 1;
+    transform: translateY(-50%) scaleY(1);
+
+    &::after {
+      right: 4px;
+      width: 6px;
+      border-color: color-mix(in srgb, var(--bf-primary) 72%, var(--bf-border));
+      background: color-mix(in srgb, var(--bf-primary) 14%, var(--bf-surface-bg));
+    }
+  }
+}
+
+.bf-dashboard-grid__block:hover,
+.bf-dashboard-grid__block:focus-within,
+.bf-dashboard-grid__block--resizing {
+  > .bf-dashboard-grid__resize-handle {
+    opacity: 0.62;
+    transform: translateY(-50%) scaleY(1);
   }
 }
 
@@ -59,18 +118,6 @@
 
   }
 
-}
-
-.bf-dashboard-grid__block--span-6 {
-  grid-column: span 6;
-}
-
-.bf-dashboard-grid__block--span-3 {
-  grid-column: span 3;
-}
-
-.bf-dashboard-grid__block--span-2 {
-  grid-column: span 2;
 }
 
 .bf-dashboard-grid__drop-preview {
@@ -102,10 +149,17 @@
   }
 
   .bf-dashboard-grid__block,
-  .bf-dashboard-grid__block--span-6,
-  .bf-dashboard-grid__block--span-3,
-  .bf-dashboard-grid__block--span-2 {
+  .bf-dashboard-grid__block[data-dashboard-span] {
     grid-column: span 1;
+  }
+
+  .bf-dashboard-grid__block[data-dashboard-span="7"],
+  .bf-dashboard-grid__block[data-dashboard-span="8"],
+  .bf-dashboard-grid__block[data-dashboard-span="9"],
+  .bf-dashboard-grid__block[data-dashboard-span="10"],
+  .bf-dashboard-grid__block[data-dashboard-span="11"],
+  .bf-dashboard-grid__block[data-dashboard-span="12"] {
+    grid-column: span 2;
   }
 }
 
@@ -121,14 +175,16 @@
   }
 
   .bf-dashboard-grid__block,
-  .bf-dashboard-grid__block--span-6,
-  .bf-dashboard-grid__block--span-3,
-  .bf-dashboard-grid__block--span-2 {
+  .bf-dashboard-grid__block[data-dashboard-span] {
     grid-column: span 1;
   }
 
   .bf-dashboard-grid__block {
     position: relative;
+  }
+
+  .bf-dashboard-grid__resize-handle {
+    display: none;
   }
 
   .bf-dashboard-grid__mobile-order-controls {

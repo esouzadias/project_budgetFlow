@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import "./DragDropContainer.style.less";
 
 import { Box, Typography } from "@mui/material";
+import { useLanguage } from "../../localization/useLanguage";
 
 export type DropIntent = "before" | "after" | "side-before" | "side-after";
 
@@ -11,6 +12,7 @@ type Props = {
   title?: string;
   children: ReactNode;
   className?: string;
+  style?: CSSProperties;
   onDragStartBlock?: (id: string) => void;
   onDragEndBlock?: () => void;
 };
@@ -19,7 +21,8 @@ type DragPayload = { scope: string; id: string };
 
 const encodePayload = (payload: DragPayload) => `${payload.scope}:${payload.id}`;
 
-const DragDropContainer = ({ id, scope, title, children, className, onDragStartBlock, onDragEndBlock }: Props) => {
+const DragDropContainer = ({ id, scope, title, children, className, style, onDragStartBlock, onDragEndBlock }: Props) => {
+  const { activeLanguage } = useLanguage();
   const mime = `text/bf-ddc-id:${scope}`;
 
   const onDragStart = (event: React.DragEvent) => {
@@ -37,7 +40,7 @@ const DragDropContainer = ({ id, scope, title, children, className, onDragStartB
   };
 
   return (
-    <section data-bf-ddc={`${scope}:${id}`} className={`bf-ddc bf-bubble-surface bf-block ${className ?? ""}`}>
+    <section data-bf-ddc={`${scope}:${id}`} className={`bf-ddc bf-bubble-surface bf-block ${className ?? ""}`} style={style}>
       <Box
         className="bf-ddc__header"
         draggable
@@ -45,7 +48,7 @@ const DragDropContainer = ({ id, scope, title, children, className, onDragStartB
         onDragEnd={onDragEnd}
         role="button"
         tabIndex={0}
-        aria-label={`Drag ${title ?? "dashboard block"}`}
+        aria-label={`${activeLanguage.dictionary.grid.drag} ${title ?? activeLanguage.dictionary.grid.dashboardBlock}`}
       >
         {title ? (
           <Typography className="bf-ddc__title" variant="subtitle2">

@@ -1,0 +1,430 @@
+@import "../../styles/Globals.less";
+
+.bf-row-comment {
+  --bf-row-comment-color: var(--bf-primary);
+
+  position: relative;
+  display: inline-flex;
+
+  &__trigger {
+    position: relative;
+    color: var(--bf-muted) !important;
+    opacity: 0.5;
+
+    &:hover,
+    &[aria-expanded="true"] {
+      color: var(--bf-row-comment-color) !important;
+      opacity: 1;
+    }
+
+    &[aria-expanded="true"] {
+      animation: bf-row-comment-trigger-think 680ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  }
+
+  &--filled {
+    .bf-row-comment__trigger {
+      color: var(--bf-row-comment-color) !important;
+      opacity: 0.86;
+    }
+  }
+}
+
+.MuiPaper-root.bf-row-comment__popover {
+  --bf-row-comment-color: var(--bf-primary);
+
+  width: min(390px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  border-radius: 26px;
+  color: var(--bf-text);
+  background: transparent;
+  box-shadow: none;
+
+  &.bf-row-comment__popover--below {
+    margin-top: 18px;
+  }
+
+  &.bf-row-comment__popover--above {
+    margin-top: -18px;
+
+    .bf-row-comment__thought-tail {
+      top: auto;
+      bottom: -24px;
+
+      i:first-child {
+        top: -1px;
+        bottom: auto;
+      }
+
+      i:last-child {
+        top: auto;
+        bottom: -1px;
+      }
+    }
+  }
+}
+
+.bf-row-comment {
+  &__surface {
+    position: relative;
+    max-height: calc(100vh - 48px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 16px;
+    border: 1px solid color-mix(in srgb, var(--bf-row-comment-color) 24%, rgba(255, 255, 255, 0.76));
+    border-radius: 26px;
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(250, 255, 254, 0.82)),
+      color-mix(in srgb, var(--bf-row-comment-color) 7%, var(--bf-glass));
+    box-shadow:
+      0 24px 65px rgba(38, 54, 70, 0.2),
+      0 7px 18px color-mix(in srgb, var(--bf-row-comment-color) 13%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.92),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.36);
+    backdrop-filter: blur(24px) saturate(155%);
+    -webkit-backdrop-filter: blur(24px) saturate(155%);
+    animation: bf-row-comment-surface-in 300ms 230ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    will-change: opacity, transform, filter;
+
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 1px;
+      z-index: 0;
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.72), transparent 38%),
+        linear-gradient(110deg, transparent 34%, rgba(255, 255, 255, 0.2) 50%, transparent 66%);
+      animation: bf-row-comment-liquid-shimmer 720ms 300ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+      pointer-events: none;
+    }
+
+    > *:not(.bf-row-comment__glow) {
+      position: relative;
+      z-index: 2;
+    }
+  }
+
+  &__thought-tail {
+    position: absolute;
+    top: -24px;
+    left: var(--bf-row-comment-tail-x, 50%);
+    z-index: 3;
+    width: 34px;
+    height: 25px;
+    transform: translateX(-50%);
+    pointer-events: none;
+
+    i {
+      position: absolute;
+      display: block;
+      border: 1px solid color-mix(in srgb, var(--bf-row-comment-color) 22%, rgba(255, 255, 255, 0.82));
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--bf-row-comment-color) 7%, rgba(255, 255, 255, 0.94));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88), 0 5px 12px rgba(38, 54, 70, 0.12);
+      backdrop-filter: blur(18px) saturate(145%);
+      -webkit-backdrop-filter: blur(18px) saturate(145%);
+
+      &:first-child {
+        left: 50%;
+        bottom: -1px;
+        width: 17px;
+        height: 17px;
+        margin-left: -8.5px;
+        animation: bf-row-comment-thought-pop 360ms 125ms cubic-bezier(0.16, 1.3, 0.3, 1) backwards;
+      }
+
+      &:last-child {
+        right: auto;
+        left: 50%;
+        top: -1px;
+        width: 10px;
+        height: 10px;
+        margin-left: -5px;
+        animation: bf-row-comment-thought-pop 300ms 20ms cubic-bezier(0.16, 1.3, 0.3, 1) backwards;
+      }
+    }
+  }
+
+  &__glow {
+    position: absolute;
+    top: -70px;
+    right: -45px;
+    z-index: 0;
+    width: 170px;
+    height: 150px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--bf-row-comment-color) 15%, transparent);
+    filter: blur(34px);
+    pointer-events: none;
+  }
+
+  &__header {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 30px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  &__header-icon {
+    width: 36px;
+    height: 36px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--bf-row-comment-color) 26%, var(--bf-border));
+    border-radius: 50%;
+    color: var(--bf-row-comment-color);
+    background: color-mix(in srgb, var(--bf-row-comment-color) 10%, rgba(255, 255, 255, 0.62));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  }
+
+  &__heading {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+
+    span {
+      color: var(--bf-muted);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    strong {
+      overflow: hidden;
+      color: var(--bf-text);
+      font-size: 14px;
+      font-weight: 900;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__close,
+  &__remove,
+  &__save {
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 50% !important;
+  }
+
+  &__close {
+    color: var(--bf-muted) !important;
+    background: color-mix(in srgb, var(--bf-surface-bg) 70%, transparent) !important;
+
+    &:hover {
+      color: var(--bf-text) !important;
+      background: color-mix(in srgb, var(--bf-muted) 9%, transparent) !important;
+    }
+  }
+
+  &__input {
+    .MuiInputBase-root {
+      align-items: flex-start;
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: color-mix(in srgb, rgba(255, 255, 255, 0.92) 88%, var(--bf-row-comment-color));
+      box-shadow:
+        inset 0 1px 2px rgba(38, 54, 70, 0.06),
+        0 1px 0 rgba(255, 255, 255, 0.68);
+    }
+
+    .MuiOutlinedInput-notchedOutline {
+      border-color: color-mix(in srgb, var(--bf-row-comment-color) 19%, var(--bf-border));
+    }
+
+    textarea {
+      color: var(--bf-text);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 11px;
+  }
+
+  &__meta {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--bf-muted);
+
+    span,
+    small {
+      font-size: 10px;
+      font-weight: 750;
+    }
+  }
+
+  &__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__remove {
+    color: var(--bf-danger) !important;
+    opacity: 0.64;
+
+    &:hover {
+      background: color-mix(in srgb, var(--bf-danger) 9%, transparent) !important;
+      opacity: 1;
+    }
+  }
+
+  &__save {
+    color: white !important;
+    background: var(--bf-row-comment-color) !important;
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--bf-row-comment-color) 25%, transparent);
+    transition:
+      transform var(--bf-fast) var(--bf-ease),
+      opacity var(--bf-fast) var(--bf-ease),
+      box-shadow var(--bf-fast) var(--bf-ease) !important;
+
+    &:hover {
+      transform: translateY(-1px) scale(1.04);
+      box-shadow: 0 8px 20px color-mix(in srgb, var(--bf-row-comment-color) 34%, transparent);
+    }
+
+    &.Mui-disabled {
+      color: color-mix(in srgb, var(--bf-muted) 64%, transparent) !important;
+      background: color-mix(in srgb, var(--bf-muted) 10%, transparent) !important;
+      box-shadow: none;
+    }
+  }
+}
+
+@keyframes bf-row-comment-trigger-think {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+
+  30% {
+    transform: translateY(-2px) scale(0.9);
+  }
+
+  62% {
+    transform: translateY(-1px) scale(1.1);
+  }
+
+  100% {
+    transform: translateY(-1px) scale(1.04);
+  }
+}
+
+@keyframes bf-row-comment-thought-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.15);
+  }
+
+  68% {
+    opacity: 1;
+    transform: translateY(1px) scale(1.18);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bf-row-comment-surface-in {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes bf-row-comment-liquid-shimmer {
+  from {
+    opacity: 0;
+    transform: translateX(-16%) skewX(-8deg);
+  }
+
+  48% {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) skewX(0);
+  }
+}
+
+:root[data-bf-theme="dark"] {
+  .bf-row-comment__surface {
+    border-color: color-mix(in srgb, var(--bf-row-comment-color) 28%, var(--bf-border));
+    background:
+      linear-gradient(145deg, rgba(27, 50, 53, 0.84), rgba(13, 29, 33, 0.7)),
+      color-mix(in srgb, var(--bf-row-comment-color) 7%, var(--bf-glass));
+    box-shadow:
+      0 26px 70px rgba(0, 0, 0, 0.48),
+      0 7px 20px color-mix(in srgb, var(--bf-row-comment-color) 12%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  .bf-row-comment {
+    &__thought-tail i {
+      background: color-mix(in srgb, var(--bf-row-comment-color) 8%, rgba(18, 37, 41, 0.86));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 5px 12px rgba(0, 0, 0, 0.28);
+    }
+
+    &__header-icon {
+      background: color-mix(in srgb, var(--bf-row-comment-color) 12%, rgba(16, 34, 38, 0.82));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    &__input .MuiInputBase-root {
+      background: color-mix(in srgb, var(--bf-row-comment-color) 5%, rgba(11, 25, 29, 0.72));
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28), 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+  }
+}
+
+@media (max-width: 700px) {
+  .MuiPaper-root.bf-row-comment__popover {
+    width: calc(100vw - 24px);
+  }
+
+  .bf-row-comment__surface {
+    padding: 14px;
+    border-radius: 22px;
+  }
+
+  .bf-row-comment__meta span {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bf-row-comment__surface,
+  .bf-row-comment__surface::before,
+  .bf-row-comment__trigger,
+  .bf-row-comment__thought-tail i,
+  .bf-row-comment__glow,
+  .bf-row-comment__save {
+    animation: none !important;
+    transition: none !important;
+  }
+}

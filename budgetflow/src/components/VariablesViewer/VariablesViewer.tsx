@@ -3,8 +3,12 @@ import "./VariablesViewer.styles.less";
 import { useMemo, useState } from "react";
 
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import InputAdornment from "@mui/material/InputAdornment";
 
-export type FormulaVariableSource = "income" | "expense" | "saving" | "formula" | "system";
+import GenericInput from "../GenericInput/GenericInput";
+import { useLanguage } from "../../localization/useLanguage";
+
+export type FormulaVariableSource = "income" | "expense" | "saving" | "table" | "formula" | "system";
 
 export type FormulaVariable = {
   key: string;
@@ -12,6 +16,9 @@ export type FormulaVariable = {
   value: number;
   source: FormulaVariableSource;
   color?: string | null;
+  tableId?: string;
+  tableName?: string;
+  rowId?: string;
 };
 
 type VariablesViewerProps = {
@@ -41,10 +48,14 @@ const VariablesViewer = ({
   variables,
   usedVariableKeys = new Set<string>(),
   formatValue,
-  title = "Variables",
-  description = "Available variables for the current period.",
+  title,
+  description,
   showSearch = true,
 }: VariablesViewerProps) => {
+  const { activeLanguage } = useLanguage();
+  const dictionary = activeLanguage.dictionary;
+  const resolvedTitle = title ?? dictionary.variables.title;
+  const resolvedDescription = description ?? dictionary.variables.description;
   const [searchValue, setSearchValue] = useState("");
 
   const filteredVariables = useMemo(() => {
@@ -64,25 +75,36 @@ const VariablesViewer = ({
     <section className="bf-variables-viewer">
       <header className="bf-variables-viewer__header">
         <div>
-          <h3>{title}</h3>
-          <p>{description}</p>
+          <h3>{resolvedTitle}</h3>
+          <p>{resolvedDescription}</p>
         </div>
       </header>
 
       {showSearch ? (
-        <label className="bf-variables-viewer__search">
-          <SearchRoundedIcon fontSize="small" />
-          <input value={searchValue} placeholder="Search variables" onChange={(event) => setSearchValue(event.target.value)} />
-        </label>
+        <GenericInput
+          value={searchValue}
+          placeholder={dictionary.variables.search}
+          onChange={(event) => setSearchValue(event.target.value)}
+          size="small"
+          fullWidth
+          className="bf-variables-viewer__search"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchRoundedIcon fontSize="small" />
+              </InputAdornment>
+            ),
+          }}
+        />
       ) : null}
 
       <div className="bf-variables-viewer__summary">
-        <span>{filteredVariables.length} variables</span>
-        <span>{usedVariableKeys.size} used</span>
+        <span>{filteredVariables.length} {dictionary.variables.variables}</span>
+        <span>{usedVariableKeys.size} {dictionary.variables.used}</span>
       </div>
 
       <div className="bf-variables-viewer__list">
-        {filteredVariables.length === 0 ? <div className="bf-variables-viewer__empty">No variables found.</div> : null}
+        {filteredVariables.length === 0 ? <div className="bf-variables-viewer__empty">{dictionary.variables.noneFound}</div> : null}
 
         {filteredVariables.map((variable) => {
           const isUsed = usedVariableKeys.has(variable.key);
@@ -105,7 +127,7 @@ const VariablesViewer = ({
               </span>
 
               <span className="bf-variables-viewer__row-meta">
-                <small>{variable.source}</small>
+                <small>{dictionary.variables.sources[variable.source]}</small>
                 <strong>{formatValue(variable.value)}</strong>
               </span>
             </div>

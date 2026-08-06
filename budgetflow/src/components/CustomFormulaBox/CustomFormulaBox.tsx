@@ -1,23 +1,29 @@
 import "./CustomFormulaBox.style.less";
 
-import { useLayoutEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react";
 
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import KeyboardArrowUpRoundedIcon from "@mui/icons-material/KeyboardArrowUpRounded";
+import ViewSidebarRoundedIcon from "@mui/icons-material/ViewSidebarRounded";
 import Tooltip from "@mui/material/Tooltip";
 
 import AdvancedFormulaTool from "../AdvancedFormulaTool/AdvancedFormulaTool";
+import ColorPicker from "../ColorPicker/ColorPicker";
 import GenericPopup from "../GenericPopup/GenericPopup";
+import GenericInput from "../GenericInput/GenericInput";
 import IconSelectorMenu from "../IconSelectorMenu/IconSelectorMenu";
 import { COLOR_PRESETS, ICON_OPTIONS } from "../IconSelectorMenu/IconSelectorMenu.db";
 
 import type { IconId } from "../IconSelectorMenu/IconSelectorMenu.types";
 import type { RegistryRow } from "../RegistryTable/RegistryTable.types";
 import type { CustomFormulaPanel } from "../../pages/DashboardPage/DashboardPage.types";
-import type { FormulaVariable, FormulaVariableSource } from "../VariablesViewer/VariablesViewer";
+import type { FormulaVariable } from "../VariablesViewer/VariablesViewer";
+import { getReadableTextColor } from "../../utils/colorContrast";
+import { useLanguage } from "../../localization/useLanguage";
+import type { LanguageDictionary } from "../../localization/languages";
 
 type FormulaEvaluation = {
   value: number | null;
@@ -25,9 +31,7 @@ type FormulaEvaluation = {
 };
 
 type CustomFormulaBoxProps = {
-  incomeRows?: RegistryRow[];
-  expenseRows?: RegistryRow[];
-  savingRows?: RegistryRow[];
+  tableVariables?: FormulaVariable[];
   customFormulaPanels?: CustomFormulaPanel[];
   onChangeCustomFormulaPanels?: (panels: CustomFormulaPanel[]) => void;
 };
@@ -41,6 +45,7 @@ const defaultPanels: CustomFormulaPanel[] = [
     iconId: "paid",
     iconImageUrl: null,
     color: COLOR_PRESETS[13] ?? "#34a853",
+    backgroundColor: null,
   },
   {
     id: "total-expenses",
@@ -50,6 +55,7 @@ const defaultPanels: CustomFormulaPanel[] = [
     iconId: "receipt",
     iconImageUrl: null,
     color: COLOR_PRESETS[7] ?? "#ea4335",
+    backgroundColor: null,
   },
   {
     id: "balance",
@@ -59,6 +65,7 @@ const defaultPanels: CustomFormulaPanel[] = [
     iconId: "bank",
     iconImageUrl: null,
     color: COLOR_PRESETS[0] ?? "#1a73e8",
+    backgroundColor: null,
   },
 ];
 
@@ -66,11 +73,11 @@ const operatorValues = new Set(["+", "-", "*", "/", "(", ")"]);
 
 const createId = () => crypto.randomUUID();
 
-const formatCurrencyValue = (value: number) => {
+const formatCurrencyValue = (value: number, locale: string) => {
   const normalizedValue = Number.parseFloat(value.toFixed(10));
   const hasDecimals = !Number.isInteger(normalizedValue);
 
-  return new Intl.NumberFormat("pt-PT", {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: hasDecimals ? 2 : 0,
@@ -102,37 +109,15 @@ const getTokenType = (value: string, variables: FormulaVariable[]) => {
   return "text";
 };
 
-const createVariablesFromRows = (
-  rows: RegistryRow[],
-  source: FormulaVariableSource,
-  fallbackPrefix: string,
-): FormulaVariable[] => {
-  const usedKeys = new Map<string, number>();
-
-  return rows.map((row, index) => {
-    const cleanLabel = row.label?.trim() || "";
-    const baseKey = normalizeFormulaKey(cleanLabel) || `${fallbackPrefix}_${index + 1}`;
-    const currentCount = usedKeys.get(baseKey) ?? 0;
-
-    usedKeys.set(baseKey, currentCount + 1);
-
-    const key = currentCount === 0 ? baseKey : `${baseKey}_${currentCount + 1}`;
-
-    return {
-      key,
-      label: cleanLabel || key,
-      value: row.amount ?? 0,
-      source,
-      color: row.color,
-    };
-  });
-};
-
-const calculateExpression = (expression: string, variables: FormulaVariable[]): FormulaEvaluation => {
+const calculateExpression = (
+  expression: string,
+  variables: FormulaVariable[],
+  errors: LanguageDictionary["formula"]["errors"],
+): FormulaEvaluation => {
   const trimmedExpression = expression.trim();
 
   if (!trimmedExpression) {
-    return { value: null, error: "Formula is empty." };
+    return { value: null, error: errors.empty };
   }
 
   const valuesByKey = new Map(variables.map((variable) => [variable.key, variable.value]));
@@ -145,7 +130,7 @@ const calculateExpression = (expression: string, variables: FormulaVariable[]): 
     const tokenType = getTokenType(token, variables);
 
     if (tokenType === "text") {
-      return { value: null, error: `Unknown variable or invalid token: ${token}` };
+      return { value: null, error: `${errors.unknownToken} ${token}` };
     }
 
     if (token === "(") {
@@ -156,25 +141,25 @@ const calculateExpression = (expression: string, variables: FormulaVariable[]): 
       openParentheses -= 1;
 
       if (openParentheses < 0) {
-        return { value: null, error: "Closing parenthesis without matching opening parenthesis." };
+        return { value: null, error: errors.closingParenthesis };
       }
     }
 
     if (tokenType === "operator" && previousTokenType === "operator" && token !== "(" && token !== ")") {
-      return { value: null, error: "Two operators cannot be used in a row." };
+      return { value: null, error: errors.consecutiveOperators };
     }
 
     previousTokenType = tokenType;
   }
 
   if (openParentheses !== 0) {
-    return { value: null, error: "Parentheses are not balanced." };
+    return { value: null, error: errors.unbalancedParentheses };
   }
 
   const lastToken = tokens[tokens.length - 1];
 
   if (lastToken && operatorValues.has(lastToken) && lastToken !== ")") {
-    return { value: null, error: "Formula cannot end with an operator." };
+    return { value: null, error: errors.trailingOperator };
   }
 
   const sanitizedExpression = tokens
@@ -185,27 +170,28 @@ const calculateExpression = (expression: string, variables: FormulaVariable[]): 
     const value = Function(`"use strict"; return (${sanitizedExpression.replace(/,/g, ".")});`)() as number;
 
     if (!Number.isFinite(value)) {
-      return { value: null, error: "Formula result is not a valid finite number." };
+      return { value: null, error: errors.invalidResult };
     }
 
     return { value: normalizeFormulaNumber(value) };
   } catch {
-    return { value: null, error: "Formula could not be calculated." };
+    return { value: null, error: errors.calculationFailed };
   }
 };
 
 const CustomFormulaBox = ({
-  incomeRows = [],
-  expenseRows = [],
-  savingRows = [],
+  tableVariables = [],
   customFormulaPanels,
   onChangeCustomFormulaPanels,
 }: CustomFormulaBoxProps) => {
+  const { activeLanguage } = useLanguage();
+  const dictionary = activeLanguage.dictionary;
   const [internalPanels, setInternalPanels] = useState<CustomFormulaPanel[]>(defaultPanels);
   const [selectedPanelId, setSelectedPanelId] = useState("");
   const [draggedPanelId, setDraggedPanelId] = useState<string | null>(null);
   const [iconEditorAnchor, setIconEditorAnchor] = useState<HTMLElement | null>(null);
   const [panelIdPendingDelete, setPanelIdPendingDelete] = useState<string | null>(null);
+  const [variablesPanelOpen, setVariablesPanelOpen] = useState(false);
 
   const cardRefs = useRef(new Map<string, HTMLButtonElement>());
   const previousCardRectsRef = useRef(new Map<string, DOMRect>());
@@ -225,11 +211,7 @@ const CustomFormulaBox = ({
   };
 
   const variables = useMemo(() => {
-    const rowVariables = [
-      ...createVariablesFromRows(incomeRows, "income", "income"),
-      ...createVariablesFromRows(expenseRows, "expense", "expense"),
-      ...createVariablesFromRows(savingRows, "saving", "saving"),
-    ];
+    const rowVariables = tableVariables;
 
     const totalIncome = rowVariables
       .filter((variable) => variable.source === "income")
@@ -246,28 +228,28 @@ const CustomFormulaBox = ({
     const systemVariables: FormulaVariable[] = [
       {
         key: "total_income",
-        label: "Total Income",
+        label: dictionary.formula.totalIncome,
         value: totalIncome,
         source: "system",
         color: COLOR_PRESETS[13] ?? "#34a853",
       },
       {
         key: "total_expenses",
-        label: "Total Expenses",
+        label: dictionary.formula.totalExpenses,
         value: totalExpenses,
         source: "system",
         color: COLOR_PRESETS[7] ?? "#ea4335",
       },
       {
         key: "total_savings",
-        label: "Total Savings",
+        label: dictionary.formula.totalSavings,
         value: totalSavings,
         source: "system",
         color: COLOR_PRESETS[0] ?? "#1a73e8",
       },
       {
         key: "balance",
-        label: "Balance",
+        label: dictionary.formula.balance,
         value: totalIncome - totalExpenses,
         source: "system",
         color: COLOR_PRESETS[0] ?? "#1a73e8",
@@ -284,18 +266,18 @@ const CustomFormulaBox = ({
       formulaVariables.push({
         key,
         label: panel.title,
-        value: calculateExpression(panel.expression, [...rowVariables, ...systemVariables, ...formulaVariables]).value ?? 0,
+        value: calculateExpression(panel.expression, [...rowVariables, ...systemVariables, ...formulaVariables], dictionary.formula.errors).value ?? 0,
         source: "formula",
         color: panel.color,
       });
     }
 
     return [...rowVariables, ...systemVariables, ...formulaVariables];
-  }, [panels, incomeRows, expenseRows, savingRows]);
+  }, [panels, tableVariables, dictionary]);
 
   const selectedPanel = panels.find((panel) => panel.id === selectedPanelId) ?? null;
   const panelPendingDelete = panels.find((panel) => panel.id === panelIdPendingDelete) ?? null;
-  const selectedPanelEvaluation = selectedPanel ? calculateExpression(selectedPanel.expression, variables) : null;
+  const selectedPanelEvaluation = selectedPanel ? calculateExpression(selectedPanel.expression, variables, dictionary.formula.errors) : null;
 
   const selectedIconOption = useMemo(() => {
     if (!selectedPanel) return ICON_OPTIONS.find((icon) => icon.id === "other") ?? ICON_OPTIONS[0];
@@ -357,15 +339,17 @@ const CustomFormulaBox = ({
     previousCardRectsRef.current = nextRects;
   };
 
-  const getPanelEvaluation = (panel: CustomFormulaPanel) => calculateExpression(panel.expression, variables);
+  const getPanelEvaluation = (panel: CustomFormulaPanel) => calculateExpression(panel.expression, variables, dictionary.formula.errors);
 
   const openPanelEditor = (panel: CustomFormulaPanel) => {
     setSelectedPanelId(panel.id);
+    setVariablesPanelOpen(false);
   };
 
   const closeEditor = () => {
     setSelectedPanelId("");
     setIconEditorAnchor(null);
+    setVariablesPanelOpen(false);
   };
 
   const updateSelectedPanel = (updates: Partial<CustomFormulaPanel>) => {
@@ -379,12 +363,13 @@ const CustomFormulaBox = ({
   const addPanel = () => {
     const nextPanel: CustomFormulaPanel = {
       id: createId(),
-      title: "New Formula",
+      title: dictionary.formula.newFormula,
       expression: "balance",
       accent: "green",
       iconId: "other",
       iconImageUrl: null,
       color: COLOR_PRESETS[0] ?? "#1a73e8",
+      backgroundColor: null,
     };
 
     captureCardRects();
@@ -493,8 +478,8 @@ const CustomFormulaBox = ({
   return (
     <main id="custom-formula-box">
       <div id="cfb__toolbar">
-        <p id="cfb__eyebrow">Custom panels</p>
-        <h2 id="cfb__title">Formula dashboard</h2>
+        <p id="cfb__eyebrow">{dictionary.formula.customPanels}</p>
+        <h2 id="cfb__title">{dictionary.formula.dashboard}</h2>
       </div>
 
       <div id="custom-formula-box__cards">
@@ -516,6 +501,12 @@ const CustomFormulaBox = ({
               type="button"
               draggable
               className={`bf-bubble-surface cfb-card cfb-card--${panel.accent} ${draggedPanelId === panel.id ? "cfb-card--dragging" : ""}`}
+              style={
+                {
+                  "--cfb-panel-bg": panel.backgroundColor || "var(--bf-surface-bg)",
+                  "--cfb-panel-content": getReadableTextColor(panel.backgroundColor),
+                } as CSSProperties
+              }
               onClick={() => openPanelEditor(panel)}
               onDragStart={() => handleDragStart(panel.id)}
               onDragOver={(event) => handleDragOver(event, panel.id)}
@@ -545,7 +536,7 @@ const CustomFormulaBox = ({
                 </span>
               ) : null}
 
-              <span className="cfb-card__mobile-order-controls" aria-label={`${panel.title} order controls`}>
+              <span className="cfb-card__mobile-order-controls" aria-label={`${panel.title} ${dictionary.grid.orderControls}`}>
                 <span
                   role="button"
                   tabIndex={0}
@@ -588,7 +579,7 @@ const CustomFormulaBox = ({
               <span className="cfb-card__content">
                 <span className="cfb-card__title">{panel.title}</span>
                 <strong className="cfb-card__value">
-                  {evaluation.value === null ? "Invalid" : formatCurrencyValue(evaluation.value)}
+                  {evaluation.value === null ? dictionary.formula.invalid : formatCurrencyValue(evaluation.value, activeLanguage.locale)}
                 </strong>
               </span>
             </button>
@@ -599,16 +590,16 @@ const CustomFormulaBox = ({
           <span id="cfb__empty_card_icon">
             <AddRoundedIcon fontSize="large" />
           </span>
-          <span>Add formula</span>
+          <span>{dictionary.formula.addFormula}</span>
         </button>
       </div>
 
       <GenericPopup
         open={Boolean(panelPendingDelete)}
-        title="Delete formula?"
-        description={`This will permanently delete ${panelPendingDelete?.title ?? "this formula"}.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={dictionary.formula.deleteTitle}
+        description={`${dictionary.formula.deletePrefix} ${panelPendingDelete?.title ?? dictionary.formula.thisFormula}.`}
+        confirmLabel={dictionary.common.delete}
+        cancelLabel={dictionary.common.cancel}
         variant="danger"
         onConfirm={confirmDeletePanel}
         onCancel={cancelDeletePanel}
@@ -623,56 +614,91 @@ const CustomFormulaBox = ({
             closeEditor();
           }}
         >
-          <aside id="cfb__editor" onMouseDown={(event) => event.stopPropagation()}>
+          <aside
+            id="cfb__editor"
+            className={variablesPanelOpen ? "cfb-editor--variables-open" : ""}
+            style={
+              {
+                "--cfb-editor-bg": selectedPanel.backgroundColor || "var(--bf-surface-bg)",
+                "--cfb-editor-content": getReadableTextColor(selectedPanel.backgroundColor),
+              } as CSSProperties
+            }
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <div id="cfb__editor_header">
-              <div>
-                <p id="cfb__editor_eyebrow">Edit card</p>
-                <h3 id="cfb__editor_title">{selectedPanel.title}</h3>
+              <div id="cfb__editor_identity">
+                <Tooltip title={dictionary.formula.customizeIcon} arrow>
+                  <button
+                    type="button"
+                    id="cfb__selected_icon_button"
+                    aria-label={dictionary.formula.customizeIcon}
+                    style={{
+                      color: selectedPanel.color,
+                      background: `color-mix(in srgb, ${selectedPanel.color} 14%, transparent)`,
+                      borderColor: `color-mix(in srgb, ${selectedPanel.color} 35%, var(--bf-border))`,
+                    }}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setIconEditorAnchor(event.currentTarget);
+                    }}
+                  >
+                    {selectedPanel.iconImageUrl ? (
+                      <img id="cfb__selected_icon_image" src={selectedPanel.iconImageUrl} alt="" />
+                    ) : (
+                      selectedIconOption.render({ fontSize: "medium" })
+                    )}
+                  </button>
+                </Tooltip>
+
+                <ColorPicker
+                  compact
+                  label={dictionary.formula.background}
+                  value={selectedPanel.backgroundColor ?? null}
+                  onChange={(backgroundColor) => updateSelectedPanel({ backgroundColor })}
+                />
+
+                <GenericInput
+                  value={selectedPanel.title}
+                  onChange={(event) => updateSelectedPanel({ title: event.target.value })}
+                  className="cfb-field__input"
+                  inputProps={{ "aria-label": dictionary.formula.name }}
+                  fullWidth
+                />
               </div>
 
-              <button type="button" id="cfb__editor_close_button" onClick={closeEditor}>
-                <CloseRoundedIcon fontSize="small" />
-              </button>
-            </div>
-
-            <div id="cfb__editor_name_row">
-              <label className="cfb-field cfb-field--icon">
-                <span className="cfb-field__label">Icon</span>
+              <div id="cfb__editor_actions">
+                <Tooltip title={variablesPanelOpen ? dictionary.formula.hideVariables : dictionary.formula.showVariables} arrow>
+                  <button
+                    type="button"
+                    id="cfb__variables_toggle_button"
+                    className={variablesPanelOpen ? "cfb-editor-action--active" : ""}
+                    onClick={() => setVariablesPanelOpen((currentValue) => !currentValue)}
+                    aria-expanded={variablesPanelOpen}
+                    aria-label={variablesPanelOpen ? dictionary.formula.hideVariables : dictionary.formula.showVariables}
+                  >
+                    <ViewSidebarRoundedIcon fontSize="small" />
+                  </button>
+                </Tooltip>
 
                 <button
                   type="button"
-                  id="cfb__selected_icon_button"
-                  style={{
-                    color: selectedPanel.color,
-                    background: `color-mix(in srgb, ${selectedPanel.color} 14%, transparent)`,
-                    borderColor: `color-mix(in srgb, ${selectedPanel.color} 35%, var(--bf-border))`,
-                  }}
-                  onMouseDown={(event) => event.stopPropagation()}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setIconEditorAnchor(event.currentTarget);
-                  }}
+                  id="cfb__editor_close_button"
+                  onClick={closeEditor}
+                  aria-label={dictionary.formula.closeEditor}
                 >
-                  {selectedPanel.iconImageUrl ? (
-                    <img id="cfb__selected_icon_image" src={selectedPanel.iconImageUrl} alt="" />
-                  ) : (
-                    selectedIconOption.render({ fontSize: "medium" })
-                  )}
+                  <CloseRoundedIcon fontSize="small" />
                 </button>
-              </label>
-
-              <label className="cfb-field cfb-field--name">
-                <span className="cfb-field__label">Name</span>
-                <input value={selectedPanel.title} onChange={(event) => updateSelectedPanel({ title: event.target.value })} />
-              </label>
+              </div>
             </div>
 
             <AdvancedFormulaTool
               expression={selectedPanel.expression}
               variables={variables}
               result={selectedPanelEvaluation}
-              formatValue={formatCurrencyValue}
+              formatValue={(value) => formatCurrencyValue(value, activeLanguage.locale)}
               onChangeExpression={(expression) => updateSelectedPanel({ expression })}
+              variablesPanelOpen={variablesPanelOpen}
             />
 
             <Tooltip title={selectedPanelEvaluation?.error ?? ""} disableHoverListener={!selectedPanelEvaluation?.error} arrow>
@@ -681,11 +707,11 @@ const CustomFormulaBox = ({
                 className={`bf-preview ${selectedPanelEvaluation?.error ? "bf-preview--invalid" : ""}`}
               >
                 <span id="cfb__result_label" className="bf-preview__label">
-                  Result
+                  {dictionary.formula.result}
                 </span>
 
                 <strong id="cfb__result_value" className="bf-preview__value">
-                  {selectedPanelEvaluation?.value === null ? "Invalid" : formatCurrencyValue(selectedPanelEvaluation?.value ?? 0)}
+                  {selectedPanelEvaluation?.value === null ? dictionary.formula.invalid : formatCurrencyValue(selectedPanelEvaluation?.value ?? 0, activeLanguage.locale)}
                 </strong>
               </div>
             </Tooltip>
@@ -701,7 +727,7 @@ const CustomFormulaBox = ({
             icons={ICON_OPTIONS}
             colorPresets={COLOR_PRESETS}
             onChange={updatePanelIcon}
-            title="Customize card icon"
+            title={dictionary.formula.customizeCardIcon}
             showCategories={false}
             allowCustomImages
             closeOnClickAway={false}

@@ -1,4 +1,7 @@
-import type { RegistryRow } from "../components/RegistryTable/RegistryTable.types";
+import {
+  normalizeRegistryTableSettings,
+  type RegistryRow,
+} from "../components/RegistryTable/RegistryTable.types";
 import type {
   BudgetTable,
   CustomFormulaPanel,
@@ -74,6 +77,7 @@ const createDefaultFormulaPanels = (): CustomFormulaPanel[] => [
     iconId: "paid",
     iconImageUrl: null,
     color: "#34a853",
+    backgroundColor: null,
   },
   {
     id: crypto.randomUUID(),
@@ -83,6 +87,7 @@ const createDefaultFormulaPanels = (): CustomFormulaPanel[] => [
     iconId: "receipt",
     iconImageUrl: null,
     color: "#ea4335",
+    backgroundColor: null,
   },
   {
     id: crypto.randomUUID(),
@@ -92,6 +97,7 @@ const createDefaultFormulaPanels = (): CustomFormulaPanel[] => [
     iconId: "bank",
     iconImageUrl: null,
     color: "#1a73e8",
+    backgroundColor: null,
   },
 ];
 
@@ -114,10 +120,30 @@ const normalizeIconImageUrl = (value: any) => {
   return cleanValue.length <= 12000 ? cleanValue : null;
 };
 
+const normalizeBackgroundImageUrl = (value: any) => {
+  if (typeof value !== "string") return null;
+
+  const cleanValue = value.trim();
+  if (!cleanValue) return null;
+  if (!cleanValue.startsWith("data:image/")) return cleanValue;
+
+  return cleanValue.length <= 950_000 ? cleanValue : null;
+};
+
 const normalizeRow = (row: any): RegistryRow => ({
   id: row.id ?? crypto.randomUUID(),
+  seriesId: typeof row.seriesId === "string" && row.seriesId.trim() ? row.seriesId : row.id,
   label: row.label ?? "",
   amount: typeof row.amount === "number" ? row.amount : null,
+  amountExpression: typeof row.amountExpression === "string" ? row.amountExpression : undefined,
+  customValues:
+    row.customValues && typeof row.customValues === "object" && !Array.isArray(row.customValues)
+      ? row.customValues
+      : {},
+  customExpressions:
+    row.customExpressions && typeof row.customExpressions === "object" && !Array.isArray(row.customExpressions)
+      ? row.customExpressions
+      : {},
   prevAmount: typeof row.prevAmount === "number" ? row.prevAmount : null,
   note: row.note ?? "",
   iconId: row.iconId ?? "other",
@@ -127,12 +153,55 @@ const normalizeRow = (row: any): RegistryRow => ({
   recurring: Boolean(row.recurring),
 });
 
+const getNormalizedTableSeriesId = (table: any, fallbackIndex: number) => {
+  if (typeof table.seriesId === "string" && table.seriesId.trim()) return table.seriesId;
+
+  const isDefault =
+    typeof table.isDefault === "boolean"
+      ? table.isDefault
+      : fallbackIndex < 2 && (table.type === "income" || table.type === "expense");
+
+  if (isDefault) return `default-${table.type ?? "custom"}`;
+
+  const normalizedName = String(table.name ?? "custom-table")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `legacy-${table.type ?? "custom"}-${normalizedName || fallbackIndex + 1}`;
+};
+
 const normalizeTable = (table: any, fallbackIndex: number): BudgetTable => ({
   id: table.id ?? `table-${fallbackIndex}-${crypto.randomUUID()}`,
+  seriesId: getNormalizedTableSeriesId(table, fallbackIndex),
   name: table.name ?? "Custom Table",
   type: table.type ?? "custom",
   visible: table.visible !== false,
   rows: Array.isArray(table.rows) ? table.rows.map(normalizeRow) : [],
+  settings: normalizeRegistryTableSettings(table.settings),
+  isDefault:
+    typeof table.isDefault === "boolean"
+      ? table.isDefault
+      : fallbackIndex < 2 && (table.type === "income" || table.type === "expense"),
+  accentColor: typeof table.accentColor === "string" ? table.accentColor : null,
+  surfaceColorCustomized: Boolean(table.surfaceColorCustomized),
+  contentColor: typeof table.contentColor === "string" ? table.contentColor : null,
+  tableBackgroundColor: typeof table.tableBackgroundColor === "string" ? table.tableBackgroundColor : null,
+  tableContentColor: typeof table.tableContentColor === "string" ? table.tableContentColor : null,
+  backgroundImageUrl: normalizeBackgroundImageUrl(table.backgroundImageUrl),
+  dashboardSpan:
+    Number.isFinite(Number(table.dashboardSpan))
+      ? Math.max(2, Math.min(12, Math.round(Number(table.dashboardSpan)))) as BudgetTable["dashboardSpan"]
+      : table.dashboardSize === "full"
+        ? 12
+        : table.dashboardSize === "half"
+          ? 6
+          : table.dashboardSize === "third"
+            ? 4
+            : undefined,
 });
 
 const normalizeFormulaPanel = (panel: any): CustomFormulaPanel => ({
@@ -167,16 +236,20 @@ const createDefaultPeriodFromLegacyData = (data: any): MonthSnapshot => ({
   tables: [
     {
       id: "table-income",
+      seriesId: "default-income",
       name: "Income",
       type: "income",
       visible: true,
+      isDefault: true,
       rows: Array.isArray(data.incomeRows) ? data.incomeRows.map(normalizeRow) : [],
     },
     {
       id: "table-expenses",
+      seriesId: "default-expense",
       name: "Expenses",
       type: "expense",
       visible: true,
+      isDefault: true,
       rows: Array.isArray(data.expenseRows) ? data.expenseRows.map(normalizeRow) : [],
     },
   ],

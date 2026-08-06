@@ -9,15 +9,17 @@ import {
   InputAdornment,
   Popover,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
 import LinkIcon from "@mui/icons-material/Link";
-import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
 import AddPhotoAlternateRoundedIcon from "@mui/icons-material/AddPhotoAlternateRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+
+import ColorPicker from "../ColorPicker/ColorPicker";
+import GenericInput from "../GenericInput/GenericInput";
+import { useLanguage } from "../../localization/useLanguage";
 
 import type { IconSelectorMenuProps } from "./IconSelectorMenu.types";
 import "./IconSelectorMenu.style.less";
@@ -79,14 +81,14 @@ const saveRecentUploadedImages = (images: RecentUploadedImage[]) => {
   }
 };
 
-const getUrlLabel = (value: string) => {
+const getUrlLabel = (value: string, fallbackLabel: string) => {
   try {
     const parsedUrl = new URL(value);
     const lastSegment = parsedUrl.pathname.split("/").filter(Boolean).at(-1);
 
     return lastSegment || parsedUrl.hostname;
   } catch {
-    return "Image URL";
+    return fallbackLabel;
   }
 };
 
@@ -152,20 +154,19 @@ export default function IconSelectorMenu({
   onChange,
   showCategories = true,
   allowCustomImages = true,
-  title = "Customize row",
+  title,
   closeOnClickAway = false,
 }: IconSelectorMenuProps) {
+  const { activeLanguage } = useLanguage();
+  const dictionary = activeLanguage.dictionary.iconSelector;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [query, setQuery] = useState("");
-  const [customAnchorEl, setCustomAnchorEl] = useState<HTMLElement | null>(null);
   const [localImageAnchorEl, setLocalImageAnchorEl] = useState<HTMLElement | null>(null);
   const [imageUrlAnchorEl, setImageUrlAnchorEl] = useState<HTMLElement | null>(null);
-  const [customDraft, setCustomDraft] = useState(row?.color ?? colorPresets[0] ?? "#1a73e8");
   const [imageUrlDraft, setImageUrlDraft] = useState(row?.iconImageUrl ?? "");
   const [recentUploadedImages, setRecentUploadedImages] = useState<RecentUploadedImage[]>(() => loadRecentUploadedImages());
 
-  const customOpen = Boolean(customAnchorEl);
   const localImageOpen = Boolean(localImageAnchorEl);
   const imageUrlOpen = Boolean(imageUrlAnchorEl);
 
@@ -204,7 +205,7 @@ export default function IconSelectorMenu({
     const nextImage: RecentUploadedImage = {
       id: createId(),
       url: cleanUrl,
-      label: image.label.trim() || "Uploaded image",
+      label: image.label.trim() || dictionary.uploadedImage,
       source: image.source,
       createdAt: Date.now(),
     };
@@ -232,14 +233,9 @@ export default function IconSelectorMenu({
   };
 
   const closeAll = () => {
-    setCustomAnchorEl(null);
     setLocalImageAnchorEl(null);
     setImageUrlAnchorEl(null);
     onClose();
-  };
-
-  const closeCustom = () => {
-    setCustomAnchorEl(null);
   };
 
   const closeLocalImagePopup = () => {
@@ -251,27 +247,23 @@ export default function IconSelectorMenu({
     setImageUrlDraft(row?.iconImageUrl ?? "");
   };
 
-  const commitCustomColor = (nextColor: string) => {
-    onChange({ color: nextColor });
-  };
-
   const handleImageUpload = async (file: File | null) => {
-  if (!file) return;
+    if (!file) return;
 
-  try {
-    const imageUrl = await createCompressedImageDataUrl(file, 48);
+    try {
+      const imageUrl = await createCompressedImageDataUrl(file, 48);
 
-    applyCustomImage(imageUrl);
+      applyCustomImage(imageUrl);
 
-    addRecentUploadedImage({
-      url: imageUrl,
-      label: file.name || "Local image",
-      source: "file",
-    });
-  } finally {
-    setLocalImageAnchorEl(null);
-  }
-};
+      addRecentUploadedImage({
+        url: imageUrl,
+        label: file.name || dictionary.localImage,
+        source: "file",
+      });
+    } finally {
+      setLocalImageAnchorEl(null);
+    }
+  };
 
   const commitImageUrl = () => {
     const cleanUrl = imageUrlDraft.trim();
@@ -282,7 +274,7 @@ export default function IconSelectorMenu({
 
     addRecentUploadedImage({
       url: cleanUrl,
-      label: getUrlLabel(cleanUrl),
+      label: getUrlLabel(cleanUrl, dictionary.imageUrl),
       source: "url",
     });
 
@@ -302,7 +294,6 @@ export default function IconSelectorMenu({
       return;
     }
 
-    setCustomAnchorEl(null);
     setLocalImageAnchorEl(null);
     setImageUrlAnchorEl(null);
     onClose();
@@ -322,10 +313,10 @@ export default function IconSelectorMenu({
         <Stack spacing={1}>
           <Stack direction="row" alignItems="center" justifyContent="space-between">
             <Typography variant="subtitle2" fontWeight={800}>
-              {title}
+              {title ?? dictionary.customizeRow}
             </Typography>
 
-            <IconButton size="small" onClick={closeAll}>
+            <IconButton size="small" onClick={closeAll} aria-label={activeLanguage.dictionary.common.close}>
               <CloseIcon fontSize="small" />
             </IconButton>
           </Stack>
@@ -336,7 +327,7 @@ export default function IconSelectorMenu({
             <>
               <Stack spacing={0.75}>
                 <Typography variant="caption" fontWeight={800} sx={{ opacity: 0.75 }}>
-                  Categories
+                  {dictionary.categories}
                 </Typography>
 
                 <Autocomplete
@@ -365,10 +356,10 @@ export default function IconSelectorMenu({
                     })
                   }
                   renderInput={(params) => (
-                    <TextField
+                    <GenericInput
                       {...params}
                       size="small"
-                      placeholder="Add categories…"
+                      placeholder={dictionary.addCategories}
                       onKeyDown={(event) => {
                         if (event.key !== "Enter") return;
 
@@ -388,27 +379,26 @@ export default function IconSelectorMenu({
             </>
           ) : null}
 
-          <Stack spacing={0.75}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="caption" fontWeight={800} sx={{ opacity: 0.75 }}>
-                Icons
-              </Typography>
+          <Stack spacing={1}>
+            <Typography variant="caption" fontWeight={800} sx={{ opacity: 0.75 }}>
+              {dictionary.icons}
+            </Typography>
 
-              <TextField
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                size="small"
-                placeholder="Search icon…"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ width: 240 }}
-              />
-            </Stack>
+            <GenericInput
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              size="small"
+              placeholder={dictionary.searchIcon}
+              className="ism-icon-search"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+              fullWidth
+            />
 
             <Box
               sx={{
@@ -437,8 +427,8 @@ export default function IconSelectorMenu({
                       borderRadius: 2,
                       display: "grid",
                       placeItems: "center",
-                      border: selected ? "2px solid rgba(26,115,232,0.9)" : "1px solid rgba(0,0,0,0.12)",
-                      backgroundColor: selected ? "rgba(26,115,232,0.10)" : "transparent",
+                      border: selected ? "2px solid var(--bf-primary)" : "1px solid var(--bf-border)",
+                      backgroundColor: selected ? "color-mix(in srgb, var(--bf-primary) 10%, transparent)" : "transparent",
                       color: selectedColor,
                     }}
                   >
@@ -455,7 +445,7 @@ export default function IconSelectorMenu({
 
               <Stack spacing={0.85}>
                 <Typography variant="caption" fontWeight={800} sx={{ opacity: 0.75 }}>
-                  Custom image
+                  {dictionary.customImage}
                 </Typography>
 
                 <Stack spacing={1}>
@@ -472,13 +462,15 @@ export default function IconSelectorMenu({
                       py: 1,
                       borderRadius: 2.25,
                       border: "1px solid rgba(0,0,0,0.12)",
-                      backgroundColor: localImageOpen ? "rgba(26,115,232,0.08)" : "rgba(0,0,0,0.015)",
+                      backgroundColor: localImageOpen
+                        ? "color-mix(in srgb, var(--bf-primary) 8%, transparent)"
+                        : "color-mix(in srgb, var(--bf-text) 1.5%, transparent)",
                       textAlign: "left",
                       transition: "transform 120ms ease, background-color 120ms ease, border-color 120ms ease",
                       "&:hover": {
                         transform: "translateY(-1px)",
-                        backgroundColor: "rgba(26,115,232,0.07)",
-                        borderColor: "rgba(26,115,232,0.34)",
+                        backgroundColor: "color-mix(in srgb, var(--bf-primary) 7%, transparent)",
+                        borderColor: "color-mix(in srgb, var(--bf-primary) 34%, transparent)",
                       },
                     }}
                   >
@@ -492,8 +484,8 @@ export default function IconSelectorMenu({
                         display: "grid",
                         placeItems: "center",
                         color: selectedColor,
-                        backgroundColor: "rgba(26,115,232,0.08)",
-                        border: "1px solid rgba(26,115,232,0.18)",
+                        backgroundColor: "color-mix(in srgb, var(--bf-primary) 8%, transparent)",
+                        border: "1px solid color-mix(in srgb, var(--bf-primary) 18%, transparent)",
                       }}
                     >
                       {customImageUrl ? (
@@ -514,10 +506,10 @@ export default function IconSelectorMenu({
 
                     <Box sx={{ minWidth: 0 }}>
                       <Typography variant="body2" fontWeight={900} sx={{ lineHeight: 1.15 }}>
-                        Browse Local files
+                        {dictionary.browseFiles}
                       </Typography>
                       <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 700 }}>
-                        Choose an image from this device
+                        {dictionary.chooseFromDevice}
                       </Typography>
                     </Box>
                   </ButtonBase>
@@ -538,13 +530,15 @@ export default function IconSelectorMenu({
                       py: 1,
                       borderRadius: 2.25,
                       border: "1px solid rgba(0,0,0,0.12)",
-                      backgroundColor: imageUrlOpen ? "rgba(26,115,232,0.08)" : "rgba(0,0,0,0.015)",
+                      backgroundColor: imageUrlOpen
+                        ? "color-mix(in srgb, var(--bf-primary) 8%, transparent)"
+                        : "color-mix(in srgb, var(--bf-text) 1.5%, transparent)",
                       textAlign: "left",
                       transition: "transform 120ms ease, background-color 120ms ease, border-color 120ms ease",
                       "&:hover": {
                         transform: "translateY(-1px)",
-                        backgroundColor: "rgba(26,115,232,0.07)",
-                        borderColor: "rgba(26,115,232,0.34)",
+                        backgroundColor: "color-mix(in srgb, var(--bf-primary) 7%, transparent)",
+                        borderColor: "color-mix(in srgb, var(--bf-primary) 34%, transparent)",
                       },
                     }}
                   >
@@ -557,8 +551,8 @@ export default function IconSelectorMenu({
                         display: "grid",
                         placeItems: "center",
                         color: selectedColor,
-                        backgroundColor: "rgba(26,115,232,0.08)",
-                        border: "1px solid rgba(26,115,232,0.18)",
+                        backgroundColor: "color-mix(in srgb, var(--bf-primary) 8%, transparent)",
+                        border: "1px solid color-mix(in srgb, var(--bf-primary) 18%, transparent)",
                       }}
                     >
                       <LinkIcon fontSize="small" />
@@ -566,10 +560,10 @@ export default function IconSelectorMenu({
 
                     <Box sx={{ minWidth: 0 }}>
                       <Typography variant="body2" fontWeight={900} sx={{ lineHeight: 1.15 }}>
-                        Upload with URL
+                        {dictionary.uploadWithUrl}
                       </Typography>
                       <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 700 }}>
-                        Paste a direct image link
+                        {dictionary.pasteImageLink}
                       </Typography>
                     </Box>
                   </ButtonBase>
@@ -588,7 +582,7 @@ export default function IconSelectorMenu({
                       }}
                     >
                       <Typography variant="caption" fontWeight={900}>
-                        Remove custom image
+                        {dictionary.removeCustomImage}
                       </Typography>
                     </ButtonBase>
                   ) : null}
@@ -612,7 +606,7 @@ export default function IconSelectorMenu({
                     <Stack spacing={0.75}>
                       <Stack direction="row" alignItems="center" justifyContent="space-between">
                         <Typography variant="caption" fontWeight={800} sx={{ opacity: 0.75 }}>
-                          Recent uploads
+                          {dictionary.recentUploads}
                         </Typography>
 
                         <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 800 }}>
@@ -639,7 +633,7 @@ export default function IconSelectorMenu({
                                   aspectRatio: "1 / 1",
                                   borderRadius: 2,
                                   overflow: "hidden",
-                                  border: selected ? "2px solid rgba(26,115,232,0.9)" : "1px solid rgba(0,0,0,0.12)",
+                                  border: selected ? "2px solid var(--bf-primary)" : "1px solid var(--bf-border)",
                                   backgroundColor: "rgba(0,0,0,0.04)",
                                   display: "block",
                                 }}
@@ -658,6 +652,7 @@ export default function IconSelectorMenu({
 
                               <IconButton
                                 size="small"
+                                aria-label={dictionary.removeRecentImage}
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   removeRecentUploadedImage(image.id);
@@ -712,19 +707,19 @@ export default function IconSelectorMenu({
                       transition: "background-color 140ms ease, border-color 140ms ease, transform 140ms ease",
                       "&:hover": {
                         transform: "translateY(-1px)",
-                        backgroundColor: "rgba(26,115,232,0.08)",
-                        borderColor: "rgba(26,115,232,0.34)",
+                        backgroundColor: "color-mix(in srgb, var(--bf-primary) 8%, transparent)",
+                        borderColor: "color-mix(in srgb, var(--bf-primary) 34%, transparent)",
                       },
                     }}
                   >
                     <AddPhotoAlternateRoundedIcon sx={{ fontSize: 46, color: selectedColor }} />
 
                     <Typography variant="body1" fontWeight={900}>
-                      Browse Local files
+                      {dictionary.browseFiles}
                     </Typography>
 
                     <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 700 }}>
-                      Click to choose an image from your device
+                      {dictionary.clickToChoose}
                     </Typography>
                   </ButtonBase>
                 </Popover>
@@ -740,10 +735,10 @@ export default function IconSelectorMenu({
                 >
                   <Stack spacing={1.25}>
                     <Typography variant="body1" fontWeight={900}>
-                      Upload With URL
+                      {dictionary.uploadWithUrl}
                     </Typography>
 
-                    <TextField
+                    <GenericInput
                       value={imageUrlDraft}
                       onChange={(event) => setImageUrlDraft(event.target.value)}
                       onBlur={() => {
@@ -765,9 +760,9 @@ export default function IconSelectorMenu({
                       size="small"
                       fullWidth
                       autoFocus
-                      placeholder="Type in URL..."
+                      placeholder={dictionary.typeUrl}
                       error={imageUrlIsInvalid}
-                      helperText={imageUrlIsInvalid ? "Invalid image URL." : "Press Enter to apply."}
+                      helperText={imageUrlIsInvalid ? dictionary.invalidUrl : dictionary.pressEnter}
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
@@ -779,7 +774,7 @@ export default function IconSelectorMenu({
                         "& .MuiInputBase-root": {
                           minHeight: 64,
                           borderRadius: 2,
-                          backgroundColor: "rgba(26,115,232,0.08)",
+                          backgroundColor: "color-mix(in srgb, var(--bf-primary) 8%, transparent)",
                         },
                         "& input": {
                           fontSize: 18,
@@ -797,91 +792,20 @@ export default function IconSelectorMenu({
 
           <Stack spacing={0.75}>
             <Typography variant="caption" fontWeight={800} sx={{ opacity: 0.75 }}>
-              Colors
+              {dictionary.colors}
             </Typography>
 
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "repeat(12, 1fr)",
-                gap: 1,
+            <ColorPicker
+              inline
+              label={dictionary.iconColor}
+              value={selectedColor}
+              presets={colorPresets}
+              allowAuto={false}
+              allowGradient={false}
+              onChange={(color) => {
+                if (color) onChange({ color });
               }}
-            >
-              {colorPresets.map((color) => {
-                const selected = row?.color === color;
-
-                return (
-                  <ButtonBase
-                    key={color}
-                    onClick={() => onChange({ color })}
-                    sx={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 999,
-                      backgroundColor: color,
-                      border: selected ? "2px solid rgba(0,0,0,0.75)" : "1px solid rgba(0,0,0,0.18)",
-                      boxShadow: selected ? "0 0 0 3px rgba(26,115,232,0.18)" : "none",
-                    }}
-                  />
-                );
-              })}
-
-              <ButtonBase
-                onClick={(event) => {
-                  setCustomDraft(selectedColor);
-                  setCustomAnchorEl(event.currentTarget);
-                }}
-                sx={{
-                  width: 18,
-                  height: 18,
-                  borderRadius: 999,
-                  border: "1px solid rgba(0,0,0,0.22)",
-                  background: "conic-gradient(from 0deg, #ea4335, #fbbc05, #34a853, #00acc1, #a142f4, #ea4335)",
-                }}
-              />
-            </Box>
-
-            <Popover
-              open={customOpen}
-              anchorEl={customAnchorEl}
-              onClose={closeCustom}
-              disableRestoreFocus
-              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
-              PaperProps={{ sx: { p: 1.25, borderRadius: 3 } }}
-            >
-              <Stack spacing={1}>
-                <Typography variant="caption" fontWeight={800} sx={{ opacity: 0.75 }}>
-                  Custom color
-                </Typography>
-
-                <TextField
-                  type="color"
-                  value={customDraft}
-                  inputProps={{
-                    onInput: (event) => {
-                      setCustomDraft((event.target as HTMLInputElement).value);
-                    },
-                    onChange: (event) => {
-                      const nextColor = (event.target as HTMLInputElement).value;
-
-                      setCustomDraft(nextColor);
-                      commitCustomColor(nextColor);
-                    },
-                  }}
-                  sx={{
-                    width: 220,
-                    "& input": {
-                      p: 0,
-                      height: 44,
-                      width: 200,
-                      border: 0,
-                      cursor: "pointer",
-                    },
-                  }}
-                />
-              </Stack>
-            </Popover>
+            />
           </Stack>
         </Stack>
       </div>

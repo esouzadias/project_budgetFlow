@@ -1,10 +1,14 @@
 @import "../../styles/Globals.less";
 
 .bf-advanced-formula-tool {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  position: static;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "formula-label"
+    "formula-input";
+  align-items: stretch;
+  gap: 10px 12px;
   margin-top: 22px;
 
   &__label-row {
@@ -18,20 +22,34 @@
       font-size: 13px;
       font-weight: 800;
     }
+
+    > small {
+      color: var(--bf-muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    &--variables {
+      display: none;
+    }
+
+    &--formula {
+      grid-area: formula-label;
+    }
   }
 
   &__search-panel {
     position: relative;
-    width: min(540px, 100%);
-    height: 62px;
+    width: 100%;
+    height: 42px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 0 18px;
-    border: 2px solid color-mix(in srgb, var(--bf-primary) 74%, var(--bf-border));
-    border-radius: var(--bf-radius-lg);
+    gap: 8px;
+    padding: 0 11px;
+    border: 1px solid color-mix(in srgb, var(--bf-primary) 56%, var(--bf-border));
+    border-radius: var(--bf-radius-md);
     background: color-mix(in srgb, var(--bf-primary) 8%, var(--bf-surface-bg));
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--bf-primary) 9%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--bf-primary) 7%, transparent);
     color: var(--bf-primary);
     animation: bf-advanced-formula-search-in 160ms var(--bf-ease);
 
@@ -49,7 +67,7 @@
       color: var(--bf-text);
       background: transparent;
       font: inherit;
-      font-size: 18px;
+      font-size: 13px;
       font-weight: 800;
     }
   }
@@ -59,7 +77,8 @@
     top: calc(100% + 8px);
     left: 0;
     z-index: 150;
-    width: min(420px, 100%);
+    right: 0;
+    width: min(340px, calc(100vw - 48px));
     max-height: 292px;
     overflow: auto;
     padding: 8px;
@@ -127,24 +146,86 @@
   }
 
   &__quick-bar {
-    min-height: 86px;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 0;
-    padding: 10px 12px;
+    position: absolute;
+    top: 82px;
+    right: 24px;
+    bottom: 24px;
+    z-index: 5;
+    width: 360px;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 9px;
+    padding: 7px;
     border: 1px solid var(--bf-border);
     border-radius: var(--bf-radius-lg);
     background: color-mix(in srgb, var(--bf-surface-bg) 94%, transparent);
+    overflow: hidden;
+    opacity: 0;
+    transform: translateX(22px) scale(0.985);
+    pointer-events: none;
+    transition:
+      opacity var(--bf-med) var(--bf-ease),
+      transform var(--bf-med) var(--bf-ease),
+      border-color var(--bf-fast) var(--bf-ease),
+      box-shadow var(--bf-fast) var(--bf-ease);
+  }
+
+  &--variables-open &__quick-bar {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    pointer-events: auto;
+  }
+
+  &__variables-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  &__variables-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    strong {
+      color: var(--bf-text);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    small {
+      min-width: 20px;
+      height: 20px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: var(--bf-radius-pill);
+      color: var(--bf-muted);
+      background: color-mix(in srgb, var(--bf-text) 7%, transparent);
+      font-size: 9px;
+      font-weight: 900;
+    }
+  }
+
+  &__variables-help {
+    margin: 0;
+    padding: 0 4px;
+    color: var(--bf-muted);
+    font-size: 10px;
+    font-weight: 750;
+    line-height: 1.35;
   }
 
   &__search-button {
-    width: 48px;
-    height: 48px;
-    flex: 0 0 48px;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
     display: inline-grid;
     place-items: center;
-    margin-right: 10px;
+    margin: 0;
     border: 1px solid var(--bf-border);
     border-radius: var(--bf-radius-pill);
     color: var(--bf-text);
@@ -174,22 +255,27 @@
   &__quick-scroll-wrap {
     position: relative;
     min-width: 0;
-    overflow: visible;
+    min-height: 0;
+    flex: 1;
+    overflow: hidden;
   }
 
   &__quick-scroll {
     min-width: 0;
-    height: 58px;
+    height: 100%;
     display: flex;
-    align-items: center;
-    gap: 10px;
-    overflow-x: scroll;
-    overflow-y: hidden;
-    padding: 2px 42px 8px 0;
+    align-content: flex-start;
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 7px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 2px 3px 4px 0;
     scroll-behavior: smooth;
 
     &::-webkit-scrollbar {
-      height: 8px;
+      width: 6px;
     }
 
     &::-webkit-scrollbar-track {
@@ -208,8 +294,8 @@
   }
 
   &__section-label {
-    flex: 0 0 auto;
-    margin-right: 4px;
+    width: 100%;
+    margin: 2px 4px;
     color: var(--bf-text);
     font-size: 13px;
     font-weight: 1000;
@@ -217,15 +303,15 @@
   }
 
   &__section-divider {
-    flex: 0 0 1px;
-    width: 1px;
-    height: 38px;
-    margin: 0 8px;
+    width: 100%;
+    height: 1px;
+    margin: 3px 0;
     background: color-mix(in srgb, var(--bf-text) 20%, transparent);
   }
 
   &__quick-empty {
-    flex: 0 0 auto;
+    width: 100%;
+    padding: 6px 4px;
     color: var(--bf-muted);
     font-size: 12px;
     font-weight: 800;
@@ -235,16 +321,16 @@
   &__quick-variable {
     --bf-variable-color: var(--bf-primary);
 
-    flex: 0 0 auto;
-    max-width: 220px;
-    min-width: 110px;
-    height: 42px;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 42px;
     display: inline-flex;
     align-items: flex-start;
     justify-content: center;
     flex-direction: column;
     gap: 2px;
-    padding: 6px 13px;
+    padding: 5px 12px;
     border: 1px solid color-mix(in srgb, var(--bf-variable-color) 42%, var(--bf-border));
     border-radius: var(--bf-radius-pill);
     color: var(--bf-variable-color);
@@ -260,7 +346,7 @@
 
     span,
     small {
-      max-width: 180px;
+      max-width: 100%;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -297,17 +383,19 @@
   }
 
   &__input {
+    grid-area: formula-input;
     display: flex;
     align-items: center;
     align-content: center;
     flex-wrap: wrap;
     gap: 12px;
     min-width: 0;
-    min-height: 108px;
-    padding: 12px;
-    border: 1px solid var(--bf-border);
+    min-height: 168px;
+    padding: 20px;
+    border: 2px solid color-mix(in srgb, var(--bf-primary) 32%, var(--bf-border));
     border-radius: var(--bf-radius-lg);
-    background: color-mix(in srgb, var(--bf-surface-bg) 92%, transparent);
+    background: color-mix(in srgb, var(--bf-surface-bg) 97%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 52%, transparent);
     cursor: text;
     transition:
       border-color var(--bf-fast) var(--bf-ease),
@@ -321,16 +409,16 @@
     }
 
     input {
-      min-width: 160px;
-      flex: 1 1 160px;
-      height: 44px;
-      border: 1px solid var(--bf-border);
+      min-width: 220px;
+      flex: 1 1 220px;
+      height: 48px;
+      border: 1px dashed color-mix(in srgb, var(--bf-primary) 34%, var(--bf-border));
       border-radius: var(--bf-radius-md);
       outline: 0;
       background: var(--bf-surface-bg);
       color: var(--bf-text);
       font: inherit;
-      font-size: 17px;
+      font-size: 19px;
       padding: 10px 12px;
       transition:
         border-color var(--bf-fast) var(--bf-ease),
@@ -553,23 +641,35 @@
 @media (max-width: 850px) {
   .bf-advanced-formula-tool {
     &__quick-bar {
-      grid-template-columns: auto minmax(0, 1fr);
-    }
-
-    &__search-panel {
-      width: 100%;
+      width: min(330px, calc(100% - 32px));
     }
   }
 }
 
 @media (max-width: 700px) {
   .bf-advanced-formula-tool {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "formula-label"
+      "formula-input";
+
+    &__quick-bar {
+      top: 74px;
+      right: 12px;
+      bottom: 12px;
+      width: calc(100% - 24px);
+    }
+
+    &__quick-scroll {
+      max-height: none;
+    }
+
     &__quick-variable {
-      max-width: 180px;
+      max-width: 100%;
 
       span,
       small {
-        max-width: 140px;
+        max-width: 100%;
       }
     }
   }
